@@ -45,6 +45,9 @@ Open `http://localhost:3000`.
 4. `Collection` page: burn card for 80% payout.
 5. `Dashboard` page: inspect aggregate redeemed and house cut stats.
 
+`ENABLE_CHAIN_CALLS` defaults to `false` for stable demo/testing mode.
+Set `ENABLE_CHAIN_CALLS=true` only when chipnet contract UTXOs and environment are fully configured.
+
 ## Odds Table (Public)
 
 | Tier | Odds | Face Value Range |

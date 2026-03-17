@@ -10,13 +10,13 @@ import type { CardAsset, CommitPackResult, PendingPack, RevealPackResult } from 
 
 const PACK_PRICE_SATS = Number(process.env.PACK_PRICE_SATS || 100_000);
 const PACK_HOUSE_CUT_SATS = Math.floor(PACK_PRICE_SATS * 0.2);
-const HOUSE_WIF = process.env.HOUSE_WIF || '';
 const HOUSE_PKH = process.env.HOUSE_PKH || '';
 const PRIZE_POOL_PKH = process.env.PRIZE_POOL_PKH || HOUSE_PKH;
 const TOKEN_CATEGORY = process.env.TOKEN_CATEGORY || '00'.repeat(32);
 const CHIPNET_ELECTRUM = process.env.CHIPNET_ELECTRUM || 'chipnet.imaginary.cash:50004';
 const MOCK_CHAIN_HEIGHT = Number(process.env.MOCK_CHAIN_HEIGHT || 1740005);
 const REVEAL_WINDOW_BLOCKS = 6;
+const ENABLE_CHAIN_CALLS = process.env.ENABLE_CHAIN_CALLS === 'true';
 
 async function deps() {
   const cashscript = await import('cashscript');
@@ -74,14 +74,9 @@ export function verifyPackLocally(input: {
 }
 
 export async function commitPackOnChipnet(input: { userWif: string; commitmentHash: string }): Promise<CommitPackResult> {
-  const { cashscript, bitcore } = await deps();
-  const { Contract, ElectrumNetworkProvider } = cashscript;
-
-  const userKey = bitcore.PrivateKey.fromWIF(input.userWif);
-  const userAddr = userKey.toAddress(bitcore.Networks.testnet).toString();
-
   const commitHeight = MOCK_CHAIN_HEIGHT;
   const commitTxid = crypto.createHash('sha256').update(`${input.commitmentHash}:${Date.now()}`).digest('hex');
+  const userAddr = `demo-user-${crypto.createHash('sha256').update(input.userWif).digest('hex').slice(0, 24)}`;
 
   const pending: CommitPackResult = {
     commitTxid,
@@ -94,17 +89,19 @@ export async function commitPackOnChipnet(input: { userWif: string; commitmentHa
     revealDeadline: commitHeight + REVEAL_WINDOW_BLOCKS
   };
 
-  try {
-    const revealArtifact = loadArtifact('PackReveal');
-    const commitArtifact = loadArtifact('PackCommit');
-    const provider = new ElectrumNetworkProvider('chipnet', CHIPNET_ELECTRUM);
-
-    const revealContract = new Contract(revealArtifact, [REVEAL_WINDOW_BLOCKS, PRIZE_POOL_PKH, TOKEN_CATEGORY, PACK_HOUSE_CUT_SATS], { provider });
-    const commitContract = new Contract(commitArtifact, [PACK_PRICE_SATS, revealContract.bytecode], { provider });
-
-    await commitContract.unlock.commit(input.commitmentHash, commitHeight).to(revealContract.address, PACK_PRICE_SATS).send();
-  } catch {
-    // Offline demo fallback: return pending state for reveal.
+  if (ENABLE_CHAIN_CALLS) {
+    try {
+      const { cashscript } = await deps();
+      const { Contract, ElectrumNetworkProvider } = cashscript;
+      const revealArtifact = loadArtifact('PackReveal');
+      const commitArtifact = loadArtifact('PackCommit');
+      const provider = new ElectrumNetworkProvider('chipnet', CHIPNET_ELECTRUM);
+      const revealContract = new Contract(revealArtifact, [REVEAL_WINDOW_BLOCKS, PRIZE_POOL_PKH, TOKEN_CATEGORY, PACK_HOUSE_CUT_SATS], { provider });
+      const commitContract = new Contract(commitArtifact, [PACK_PRICE_SATS, revealContract.bytecode], { provider });
+      await commitContract.unlock.commit(input.commitmentHash, commitHeight).to(revealContract.address, PACK_PRICE_SATS).send();
+    } catch {
+      // Offline/demo fallback.
+    }
   }
 
   return pending;
@@ -135,40 +132,37 @@ export async function revealPackOnChipnet(input: {
   const mintedCards = asCardAssets(cards);
 
   let revealTxid = `mock-reveal-${Date.now()}`;
-  try {
-    const { cashscript, bitcore } = await deps();
-    const { Contract, ElectrumNetworkProvider, SignatureTemplate } = cashscript;
-
-    const userKey = bitcore.PrivateKey.fromWIF(input.userWif);
-    const userPk = Buffer.from(userKey.toPublicKey().toBuffer()).toString('hex');
-    const userAddr = userKey.toAddress(bitcore.Networks.testnet).toString();
-
-    const revealArtifact = loadArtifact('PackReveal');
-    const provider = new ElectrumNetworkProvider('chipnet', CHIPNET_ELECTRUM);
-    const contract = new Contract(revealArtifact, [REVEAL_WINDOW_BLOCKS, PRIZE_POOL_PKH, TOKEN_CATEGORY, PACK_HOUSE_CUT_SATS], { provider });
-    const signer = new SignatureTemplate(input.userWif);
-
-    const commitments = mintedCards.map((c) => c.commitmentHex);
-    const revealBytes = Buffer.from(`${input.userSeed}:${input.nonce}`, 'utf8').toString('hex');
-
-    const tx = await contract.unlock
-      .reveal(
-        input.pending.commitmentHash,
-        revealBytes,
-        input.pending.commitHeight,
-        input.pending.blockHashN1,
-        input.pending.blockHashN2,
-        entropyRoot,
-        ...commitments,
-        userPk,
-        signer
-      )
-      .to(userAddr, 1000)
-      .send();
-
-    revealTxid = typeof tx === 'string' ? tx : tx.txid;
-  } catch {
-    // Offline fallback for POC UX.
+  if (ENABLE_CHAIN_CALLS) {
+    try {
+      const { cashscript, bitcore } = await deps();
+      const { Contract, ElectrumNetworkProvider, SignatureTemplate } = cashscript;
+      const userKey = bitcore.PrivateKey.fromWIF(input.userWif);
+      const userPk = Buffer.from(userKey.toPublicKey().toBuffer()).toString('hex');
+      const userAddr = userKey.toAddress(bitcore.Networks.testnet).toString();
+      const revealArtifact = loadArtifact('PackReveal');
+      const provider = new ElectrumNetworkProvider('chipnet', CHIPNET_ELECTRUM);
+      const contract = new Contract(revealArtifact, [REVEAL_WINDOW_BLOCKS, PRIZE_POOL_PKH, TOKEN_CATEGORY, PACK_HOUSE_CUT_SATS], { provider });
+      const signer = new SignatureTemplate(input.userWif);
+      const commitments = mintedCards.map((c) => c.commitmentHex);
+      const revealBytes = Buffer.from(`${input.userSeed}:${input.nonce}`, 'utf8').toString('hex');
+      const tx = await contract.unlock
+        .reveal(
+          input.pending.commitmentHash,
+          revealBytes,
+          input.pending.commitHeight,
+          input.pending.blockHashN1,
+          input.pending.blockHashN2,
+          entropyRoot,
+          ...commitments,
+          userPk,
+          signer
+        )
+        .to(userAddr, 1000)
+        .send();
+      revealTxid = typeof tx === 'string' ? tx : tx.txid;
+    } catch {
+      // Offline fallback.
+    }
   }
 
   return {
@@ -197,30 +191,29 @@ export function revealBatchLocally(inputs: Array<{
 }
 
 export async function redeemCardOnChipnet(userWif: string, card: CardAsset) {
-  if (!PRIZE_POOL_PKH) throw new Error('Missing PRIZE_POOL_PKH');
-
-  const { cashscript, bitcore } = await deps();
-  const { Contract, ElectrumNetworkProvider, SignatureTemplate } = cashscript;
-
-  const userKey = bitcore.PrivateKey.fromWIF(userWif);
-  const userPk = Buffer.from(userKey.toPublicKey().toBuffer()).toString('hex');
-  const userAddr = userKey.toAddress(bitcore.Networks.testnet).toString();
-
-  const artifact = loadArtifact('CardRedeemer');
-  const provider = new ElectrumNetworkProvider('chipnet', CHIPNET_ELECTRUM);
-  const contract = new Contract(artifact, [PRIZE_POOL_PKH], { provider });
-  const signer = new SignatureTemplate(userWif);
+  if (ENABLE_CHAIN_CALLS && !PRIZE_POOL_PKH) throw new Error('Missing PRIZE_POOL_PKH');
 
   const payout = Math.floor(card.faceValueSats * 0.8);
   const houseCut = card.faceValueSats - payout;
 
   let txid = `mock-redeem-${Date.now()}`;
-  try {
-    const poolAddress = bitcore.Address.fromPublicKeyHash(Buffer.from(PRIZE_POOL_PKH, 'hex'), bitcore.Networks.testnet).toString();
-    const tx = await contract.unlock.redeem(userPk, signer, payout, houseCut).to(userAddr, payout).to(poolAddress, houseCut).send();
-    txid = typeof tx === 'string' ? tx : tx.txid;
-  } catch {
-    // Fallback for local demo.
+  if (ENABLE_CHAIN_CALLS) {
+    try {
+      const { cashscript, bitcore } = await deps();
+      const { Contract, ElectrumNetworkProvider, SignatureTemplate } = cashscript;
+      const userKey = bitcore.PrivateKey.fromWIF(userWif);
+      const userPk = Buffer.from(userKey.toPublicKey().toBuffer()).toString('hex');
+      const userAddr = userKey.toAddress(bitcore.Networks.testnet).toString();
+      const artifact = loadArtifact('CardRedeemer');
+      const provider = new ElectrumNetworkProvider('chipnet', CHIPNET_ELECTRUM);
+      const contract = new Contract(artifact, [PRIZE_POOL_PKH], { provider });
+      const signer = new SignatureTemplate(userWif);
+      const poolAddress = bitcore.Address.fromPublicKeyHash(Buffer.from(PRIZE_POOL_PKH, 'hex'), bitcore.Networks.testnet).toString();
+      const tx = await contract.unlock.redeem(userPk, signer, payout, houseCut).to(userAddr, payout).to(poolAddress, houseCut).send();
+      txid = typeof tx === 'string' ? tx : tx.txid;
+    } catch {
+      // Offline fallback.
+    }
   }
 
   return { txid, payout, houseCut };

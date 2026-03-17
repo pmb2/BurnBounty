@@ -18,6 +18,7 @@ From `.env.example`:
 - `PACK_PRICE_SATS`
 - `TOKEN_CATEGORY`
 - `REVEAL_WINDOW_BLOCKS`
+- `ENABLE_CHAIN_CALLS` (`false` for demo fallback, `true` for real chipnet calls)
 
 ## Compile Contracts
 

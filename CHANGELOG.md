@@ -4,6 +4,13 @@ All notable changes to this project should be documented in this file.
 
 Format inspired by Keep a Changelog and semantic versioning.
 
+## [Unreleased]
+
+### Fixed
+- corrected RNG rejection sampling to 64-bit draws for large tier ranges
+- added demo-safe `ENABLE_CHAIN_CALLS=false` path to avoid runtime chain dependency issues in local testing
+- updated docs/env to describe chain-call toggle behavior
+
 ## [0.4.0] - 2026-03-17
 
 ### Added

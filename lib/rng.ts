@@ -61,26 +61,40 @@ export function mix32Rounds(rootHex: string): string {
   return state.toString('hex');
 }
 
-function expandStream(seedHex: string, minBytes: number): Buffer {
-  const chunks: Buffer[] = [];
+function createEntropySource(seedHex: string) {
+  const seed = Buffer.from(seedHex, 'hex');
   let counter = 0;
-  while (Buffer.concat(chunks).length < minBytes) {
+  let pool = Buffer.alloc(0);
+  let offset = 0;
+
+  function refill() {
     const c = Buffer.allocUnsafe(4);
     c.writeUInt32BE(counter++, 0);
-    chunks.push(sha256(Buffer.concat([Buffer.from(seedHex, 'hex'), c])));
+    pool = Buffer.concat([pool.subarray(offset), sha256(Buffer.concat([seed, c]))]);
+    offset = 0;
   }
-  return Buffer.concat(chunks);
+
+  function nextUint32() {
+    if (offset + 4 > pool.length) refill();
+    const value = pool.readUInt32BE(offset);
+    offset += 4;
+    return value;
+  }
+
+  return { nextUint32 };
 }
 
-function drawUniform(stream: Buffer, cursor: { i: number }, maxExclusive: number): number {
-  const uint32Max = 0x1_0000_0000;
-  const threshold = uint32Max - (uint32Max % maxExclusive);
+function drawUniform(source: { nextUint32: () => number }, maxExclusive: number): number {
+  const max = BigInt(maxExclusive);
+  if (max <= 0n) throw new Error('maxExclusive must be > 0');
+  const uint64Max = 1n << 64n;
+  const threshold = uint64Max - (uint64Max % max);
 
   for (;;) {
-    if (cursor.i + 4 > stream.length) throw new Error('Entropy stream exhausted');
-    const value = stream.readUInt32BE(cursor.i);
-    cursor.i += 4;
-    if (value < threshold) return value % maxExclusive;
+    const hi = BigInt(source.nextUint32());
+    const lo = BigInt(source.nextUint32());
+    const value = (hi << 32n) | lo;
+    if (value < threshold) return Number(value % max);
   }
 }
 
@@ -98,16 +112,15 @@ export type GeneratedCard = {
 
 export function generateCardsFromEntropy(entropyRootHex: string, cardCount = 5): GeneratedCard[] {
   const mixedHex = mix32Rounds(entropyRootHex);
-  const stream = expandStream(mixedHex, cardCount * 16);
-  const cursor = { i: 0 };
+  const source = createEntropySource(mixedHex);
 
   const cards: GeneratedCard[] = [];
   for (let i = 0; i < cardCount; i++) {
-    const roll = drawUniform(stream, cursor, 100);
+    const roll = drawUniform(source, 100);
     const tier = tierFromRoll(roll);
     const [min, max] = FACE_VALUE_RANGES[tier];
     const span = max - min + 1;
-    const faceValueSats = min + drawUniform(stream, cursor, span);
+    const faceValueSats = min + drawUniform(source, span);
     cards.push({ tier, faceValueSats });
   }
 
