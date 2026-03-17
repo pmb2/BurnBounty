@@ -46,13 +46,13 @@ export default function CommitPage() {
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-10">
-      <h1 className="text-3xl font-bold">Commit Pack</h1>
+      <h1 className="text-3xl font-bold">Claim A Bounty Drop</h1>
       <p className="mt-2 text-zinc-300">
-        Step 1 of 2: create a commitment hash from your private reveal seed and lock your pack purchase.
+        Step 1 of 2: lock your bounty drop by committing a private reveal seed hash.
       </p>
 
       <div className="mt-6 rounded-2xl border border-border bg-card p-5">
-        <Button onClick={commitPack} disabled={loading}>{loading ? 'Committing...' : 'Commit (0.001 BCH)'}</Button>
+        <Button onClick={commitPack} disabled={loading}>{loading ? 'Committing...' : 'Lock Bounty Pack (0.001 BCH)'}</Button>
       </div>
 
       {pending && (

@@ -3,22 +3,22 @@
 @tailwind utilities;
 
 :root {
-  --background: 216 32% 9%;
-  --foreground: 210 40% 96%;
-  --card: 220 25% 14%;
-  --card-foreground: 210 40% 96%;
-  --primary: 164 93% 45%;
-  --primary-foreground: 220 35% 8%;
-  --border: 218 20% 24%;
-  --input: 218 20% 24%;
-  --ring: 164 93% 45%;
+  --background: 22 30% 8%;
+  --foreground: 36 33% 93%;
+  --card: 24 22% 13%;
+  --card-foreground: 36 33% 93%;
+  --primary: 15 89% 54%;
+  --primary-foreground: 20 30% 8%;
+  --border: 24 18% 26%;
+  --input: 24 18% 26%;
+  --ring: 136 86% 42%;
 }
 
 body {
   @apply bg-background text-foreground min-h-screen;
-  background-image: radial-gradient(circle at 20% 20%, rgba(26, 175, 142, 0.16), transparent 35%),
-    radial-gradient(circle at 80% 0%, rgba(111, 177, 255, 0.2), transparent 32%),
-    linear-gradient(130deg, #0b1524 0%, #091523 45%, #0b1a28 100%);
+  background-image: radial-gradient(circle at 20% 20%, rgba(255, 113, 56, 0.18), transparent 34%),
+    radial-gradient(circle at 80% 0%, rgba(43, 228, 111, 0.15), transparent 30%),
+    linear-gradient(130deg, #120d0a 0%, #17100c 45%, #110d0c 100%);
 }
 
 .grid-fade {

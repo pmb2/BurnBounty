@@ -48,8 +48,8 @@ export default function CollectionPage() {
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Collection</h1>
-        <p className="text-zinc-300">Burn any card for instant 80% payout in BCH (chipnet).</p>
+        <h1 className="text-3xl font-bold">Hunter Collection</h1>
+        <p className="text-zinc-300">Turn in any wanted card for an instant 80% BCH bounty payout.</p>
       </div>
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((card) => (

@@ -79,8 +79,8 @@ export default function RevealPage() {
     <main className="relative mx-auto max-w-6xl px-6 py-10">
       <MagicParticles />
       <div className="relative mb-6">
-        <h1 className="text-3xl font-bold">Reveal Pack</h1>
-        <p className="text-zinc-300">Step 2 of 2: reveal seed + nonce and open your 5 cards.</p>
+        <h1 className="text-3xl font-bold">Reveal Bounty List</h1>
+        <p className="text-zinc-300">Step 2 of 2: reveal seed + nonce and unlock your 5 wanted cards.</p>
       </div>
 
       <PackReveal3D cards={cards} revealed={!!result} />
@@ -93,7 +93,7 @@ export default function RevealPage() {
         <div className="mt-4 rounded-2xl border border-border bg-card p-5">
           <p className="text-sm text-zinc-300">Commit txid: {stash.pending.commitTxid}</p>
           <p className="text-sm text-zinc-300">Commitment hash: {stash.pending.commitmentHash}</p>
-          <Button className="mt-4" onClick={revealPack} disabled={loading}>{loading ? 'Revealing...' : 'Reveal & Open'}</Button>
+          <Button className="mt-4" onClick={revealPack} disabled={loading}>{loading ? 'Revealing...' : 'Reveal & Hunt'}</Button>
         </div>
       )}
 
