@@ -1,0 +1,47 @@
+{
+  "name": "cashborders-poc",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "contracts:compile": "tsx scripts/compile.ts",
+    "contracts:deploy": "tsx scripts/deploy.ts",
+    "test:flow": "tsx scripts/test-flow.ts",
+    "gen:cards": "tsx scripts/generate-card-assets.ts"
+  },
+  "dependencies": {
+    "@cashscript/sdk": "npm:cashscript@^0.12.1",
+    "bitcore-lib-cash": "^10.8.6",
+    "cashscript": "^0.12.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.6.3",
+    "lucide-react": "^0.511.0",
+    "next": "15.3.1",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "tailwind-merge": "^3.3.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^9.22.0",
+    "eslint-config-next": "15.3.1",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  }
+}

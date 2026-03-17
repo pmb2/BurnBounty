@@ -1,0 +1,142 @@
+[
+  {
+    "id": "gold-satoshi-diamond",
+    "name": "Satoshi Diamond Sigil",
+    "tier": "Gold",
+    "image": "ipfs://bafkrei-cashborders-poc/cards/gold-satoshi-diamond.png",
+    "prompt": "Gold bordered portrait of Satoshi in crystalline cyberpunk frame, dramatic rim light"
+  },
+  {
+    "id": "silver-node-future",
+    "name": "Future Node Architect",
+    "tier": "Silver",
+    "image": "ipfs://bafkrei-cashborders-poc/cards/silver-node-future.png",
+    "prompt": "Silver metallic BCH full node core with holographic city"
+  },
+  {
+    "id": "bronze-classic-portrait",
+    "name": "Classic BCH Pioneer",
+    "tier": "Bronze",
+    "image": "ipfs://bafkrei-cashborders-poc/cards/bronze-classic-portrait.png",
+    "prompt": "Bronze engraved portrait in vintage money style"
+  },
+  {
+    "id": "bronze-desert-relay",
+    "name": "Desert Relay Tower",
+    "tier": "Bronze",
+    "image": "ipfs://bafkrei-cashborders-poc/cards/bronze-desert-relay.png",
+    "prompt": "BCH relay tower in desert sunset"
+  },
+  {
+    "id": "bronze-ledger-smith",
+    "name": "Ledger Smith",
+    "tier": "Bronze",
+    "image": "ipfs://bafkrei-cashborders-poc/cards/bronze-ledger-smith.png",
+    "prompt": "Artisan forging hardware wallet"
+  },
+  {
+    "id": "bronze-market-street",
+    "name": "Market Street Merchant",
+    "tier": "Bronze",
+    "image": "ipfs://bafkrei-cashborders-poc/cards/bronze-market-street.png",
+    "prompt": "Merchant accepting BCH on a market street"
+  },
+  {
+    "id": "bronze-hash-lab",
+    "name": "Hash Lab Apprentice",
+    "tier": "Bronze",
+    "image": "ipfs://bafkrei-cashborders-poc/cards/bronze-hash-lab.png",
+    "prompt": "Retro-futurist BCH hash lab"
+  },
+  {
+    "id": "bronze-miner-camp",
+    "name": "Miner Camp Dawn",
+    "tier": "Bronze",
+    "image": "ipfs://bafkrei-cashborders-poc/cards/bronze-miner-camp.png",
+    "prompt": "BCH mining camp at sunrise"
+  },
+  {
+    "id": "bronze-circuit-scribe",
+    "name": "Circuit Scribe",
+    "tier": "Bronze",
+    "image": "ipfs://bafkrei-cashborders-poc/cards/bronze-circuit-scribe.png",
+    "prompt": "Scribe drafting circuit scrolls"
+  },
+  {
+    "id": "silver-bridge-runner",
+    "name": "Bridge Runner",
+    "tier": "Silver",
+    "image": "ipfs://bafkrei-cashborders-poc/cards/silver-bridge-runner.png",
+    "prompt": "Courier sprinting over neon payment bridge"
+  },
+  {
+    "id": "silver-chain-cartographer",
+    "name": "Chain Cartographer",
+    "tier": "Silver",
+    "image": "ipfs://bafkrei-cashborders-poc/cards/silver-chain-cartographer.png",
+    "prompt": "Cartographer mapping BCH routes"
+  },
+  {
+    "id": "silver-vault-sentinel",
+    "name": "Vault Sentinel",
+    "tier": "Silver",
+    "image": "ipfs://bafkrei-cashborders-poc/cards/silver-vault-sentinel.png",
+    "prompt": "Armored sentinel guarding vault"
+  },
+  {
+    "id": "silver-merchant-guild",
+    "name": "Merchant Guild",
+    "tier": "Silver",
+    "image": "ipfs://bafkrei-cashborders-poc/cards/silver-merchant-guild.png",
+    "prompt": "Guild hall and BCH marketplace"
+  },
+  {
+    "id": "silver-latency-slasher",
+    "name": "Latency Slasher",
+    "tier": "Silver",
+    "image": "ipfs://bafkrei-cashborders-poc/cards/silver-latency-slasher.png",
+    "prompt": "Cyber blade slicing latency waveforms"
+  },
+  {
+    "id": "gold-consensus-warden",
+    "name": "Consensus Warden",
+    "tier": "Gold",
+    "image": "ipfs://bafkrei-cashborders-poc/cards/gold-consensus-warden.png",
+    "prompt": "Guardian over consensus wheel"
+  },
+  {
+    "id": "gold-liquidity-sage",
+    "name": "Liquidity Sage",
+    "tier": "Gold",
+    "image": "ipfs://bafkrei-cashborders-poc/cards/gold-liquidity-sage.png",
+    "prompt": "Sage controlling liquidity streams"
+  },
+  {
+    "id": "gold-epoch-forge",
+    "name": "Epoch Forge",
+    "tier": "Gold",
+    "image": "ipfs://bafkrei-cashborders-poc/cards/gold-epoch-forge.png",
+    "prompt": "Legendary epoch forge with sparks"
+  },
+  {
+    "id": "diamond-genesis-oracle",
+    "name": "Genesis Oracle",
+    "tier": "Diamond",
+    "image": "ipfs://bafkrei-cashborders-poc/cards/diamond-genesis-oracle.png",
+    "prompt": "Celestial oracle and genesis constellation"
+  },
+  {
+    "id": "diamond-infinity-mint",
+    "name": "Infinity Mint Engine",
+    "tier": "Diamond",
+    "image": "ipfs://bafkrei-cashborders-poc/cards/diamond-infinity-mint.png",
+    "prompt": "Impossible mint engine of light"
+  },
+  {
+    "id": "diamond-borderless-satoshi",
+    "name": "Borderless Satoshi Prime",
+    "tier": "Diamond",
+    "image": "ipfs://bafkrei-cashborders-poc/cards/diamond-borderless-satoshi.png",
+    "prompt": "Prestige Satoshi portrait with refractive prism"
+  }
+]

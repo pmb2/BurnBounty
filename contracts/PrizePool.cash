@@ -1,0 +1,21 @@
+pragma cashscript ^0.12.1;
+
+// PrizePool holds reserve BCH and only allows:
+// 1) forwarding funds into CardRedeemer covenant path
+// 2) admin emergency withdraw/reseed (POC governance control)
+contract PrizePool(pubkey adminPkh, bytes cardRedeemerLockingBytecode) {
+  function forwardToRedeemer(int amount) {
+    require(tx.outputs[0].lockingBytecode == cardRedeemerLockingBytecode);
+    require(tx.outputs[0].value == amount);
+    require(tx.outputs[0].tokenCategory == 0x);
+  }
+
+  function adminWithdraw(pubkey adminPk, sig adminSig, int amount) {
+    require(hash160(adminPk) == adminPkh);
+    require(checkSig(adminSig, adminPk));
+
+    require(tx.outputs[0].lockingBytecode == new LockingBytecodeP2PKH(adminPkh));
+    require(tx.outputs[0].value == amount);
+    require(tx.outputs[0].tokenCategory == 0x);
+  }
+}

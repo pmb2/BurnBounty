@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 216 32% 9%;
+  --foreground: 210 40% 96%;
+  --card: 220 25% 14%;
+  --card-foreground: 210 40% 96%;
+  --primary: 164 93% 45%;
+  --primary-foreground: 220 35% 8%;
+  --border: 218 20% 24%;
+  --input: 218 20% 24%;
+  --ring: 164 93% 45%;
+}
+
+body {
+  @apply bg-background text-foreground min-h-screen;
+  background-image: radial-gradient(circle at 20% 20%, rgba(26, 175, 142, 0.16), transparent 35%),
+    radial-gradient(circle at 80% 0%, rgba(111, 177, 255, 0.2), transparent 32%),
+    linear-gradient(130deg, #0b1524 0%, #091523 45%, #0b1a28 100%);
+}
+
+.grid-fade {
+  background-image: linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 48px 48px;
+}

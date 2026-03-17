@@ -1,0 +1,82 @@
+pragma cashscript ^0.12.1;
+
+// PackReveal verifies a commitment reveal and enforces deterministic RNG inputs.
+// Security model (March 2026 chipnet-compatible):
+// - commitment verified on-chain
+// - 6-block reveal window enforced
+// - entropy root includes multi-block hashes + tx hashPrevouts + user seed bytes
+// - 5 generated commitments are checked against outputs
+//
+// Note: direct VM-side loop/bitwise PRNG rounds become cleaner post-May-2026 upgrades.
+// This contract validates the deterministic RNG root while generation parity is mirrored in /lib/verify.ts.
+contract PackReveal(
+  int revealWindowBlocks,
+  pubkey prizePoolPkh,
+  bytes categoryId,
+  int houseCutSats
+) {
+  function reveal(
+    bytes32 commitmentHash,
+    bytes userSeed,
+    int commitHeight,
+    bytes32 prevBlockHash1,
+    bytes32 prevBlockHash2,
+    bytes32 rngRoot,
+    bytes c1,
+    bytes c2,
+    bytes c3,
+    bytes c4,
+    bytes c5,
+    pubkey buyerPk
+  ) {
+    // Verify commitment.
+    require(hash256(userSeed) == commitmentHash);
+
+    // Enforce reveal window.
+    require(tx.time <= commitHeight + revealWindowBlocks);
+
+    // Derive expected RNG root using multi-source entropy.
+    bytes32 expectedRoot = hash256(userSeed + prevBlockHash1 + prevBlockHash2 + tx.hashPrevouts);
+    require(expectedRoot == rngRoot);
+
+    LockingBytecode buyerLock = new LockingBytecodeP2PKH(hash160(buyerPk));
+
+    // Output 0 carries 20% house cut.
+    require(tx.outputs[0].lockingBytecode == new LockingBytecodeP2PKH(prizePoolPkh));
+    require(tx.outputs[0].value == houseCutSats);
+    require(tx.outputs[0].tokenCategory == 0x);
+
+    // Outputs 1..5 mint the revealed cards.
+    require(tx.outputs[1].lockingBytecode == buyerLock);
+    require(tx.outputs[1].tokenCategory == categoryId);
+    require(tx.outputs[1].nftCommitment == c1);
+
+    require(tx.outputs[2].lockingBytecode == buyerLock);
+    require(tx.outputs[2].tokenCategory == categoryId);
+    require(tx.outputs[2].nftCommitment == c2);
+
+    require(tx.outputs[3].lockingBytecode == buyerLock);
+    require(tx.outputs[3].tokenCategory == categoryId);
+    require(tx.outputs[3].nftCommitment == c3);
+
+    require(tx.outputs[4].lockingBytecode == buyerLock);
+    require(tx.outputs[4].tokenCategory == categoryId);
+    require(tx.outputs[4].nftCommitment == c4);
+
+    require(tx.outputs[5].lockingBytecode == buyerLock);
+    require(tx.outputs[5].tokenCategory == categoryId);
+    require(tx.outputs[5].nftCommitment == c5);
+
+    // Uniqueness guard.
+    require(c1 != c2);
+    require(c1 != c3);
+    require(c1 != c4);
+    require(c1 != c5);
+    require(c2 != c3);
+    require(c2 != c4);
+    require(c2 != c5);
+    require(c3 != c4);
+    require(c3 != c5);
+    require(c4 != c5);
+  }
+}

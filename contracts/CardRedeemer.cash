@@ -1,0 +1,30 @@
+pragma cashscript ^0.12.1;
+
+// CardRedeemer enforces burn redemption.
+// Input NFT commitment format (9 bytes):
+// [0] tier byte, [1..8] face value sats uint64 big-endian.
+contract CardRedeemer(pubkey prizePoolPkh) {
+  function redeem(pubkey redeemerPk, sig redeemerSig, int payout, int houseCut) {
+    require(checkSig(redeemerSig, redeemerPk));
+
+    bytes commitment = tx.inputs[this.activeInputIndex].nftCommitment;
+    require(commitment.length == 9);
+
+    int faceValue = int(commitment.split(1)[1]);
+    int expectedPayout = (faceValue * 80) / 100;
+    int expectedHouse = faceValue - expectedPayout;
+
+    require(payout == expectedPayout);
+    require(houseCut == expectedHouse);
+
+    // Output 0 = redeemer payout (BCH only, NFT burned).
+    require(tx.outputs[0].lockingBytecode == new LockingBytecodeP2PKH(hash160(redeemerPk)));
+    require(tx.outputs[0].value == payout);
+    require(tx.outputs[0].tokenCategory == 0x);
+
+    // Output 1 = house cut to prize pool address (BCH only).
+    require(tx.outputs[1].lockingBytecode == new LockingBytecodeP2PKH(prizePoolPkh));
+    require(tx.outputs[1].value == houseCut);
+    require(tx.outputs[1].tokenCategory == 0x);
+  }
+}

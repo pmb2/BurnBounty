@@ -1,0 +1,17 @@
+pragma cashscript ^0.12.1;
+
+// PackCommit locks one pending pack purchase against a buyer commitment.
+// commitmentHash = hash256(userSeed || nonce)
+contract PackCommit(int packPriceSats, bytes packRevealLockingBytecode) {
+  function commit(bytes32 commitmentHash, int commitHeight) {
+    require(commitmentHash != 0x0000000000000000000000000000000000000000000000000000000000000000);
+
+    // Enforce minimum pack payment and forward funds into PackReveal covenant UTXO.
+    require(tx.outputs[0].lockingBytecode == packRevealLockingBytecode);
+    require(tx.outputs[0].value >= packPriceSats);
+    require(tx.outputs[0].tokenCategory == 0x);
+
+    // commitHeight is provided so reveal path can enforce a bounded window.
+    require(commitHeight >= 0);
+  }
+}
