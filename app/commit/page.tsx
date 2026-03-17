@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { deriveAddressFromWif } from '@/lib/wallet';
 
 async function hash256Hex(input: string): Promise<string> {
   const bytes = new TextEncoder().encode(input);
@@ -14,11 +15,33 @@ async function hash256Hex(input: string): Promise<string> {
 export default function CommitPage() {
   const [pending, setPending] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [wifInput, setWifInput] = useState('');
+  const [connectedAddress, setConnectedAddress] = useState('');
+
+  function connectWallet() {
+    const normalized = wifInput.trim();
+    if (!normalized) {
+      toast.error('Missing WIF', { description: 'Paste a chipnet/testnet WIF to continue.' });
+      return;
+    }
+    try {
+      const address = deriveAddressFromWif(normalized);
+      localStorage.setItem('burnbounty.wif', normalized);
+      setConnectedAddress(address);
+      setWifInput('');
+      toast.success('Wallet connected', { description: `Using ${address}` });
+    } catch {
+      toast.error('Invalid WIF', { description: 'The provided key could not be parsed.' });
+    }
+  }
 
   async function commitPack() {
     setLoading(true);
     try {
-      const wif = localStorage.getItem('burnbounty.wif') || '';
+      const wif = (localStorage.getItem('burnbounty.wif') || '').trim();
+      if (!wif) {
+        throw new Error('Chipnet WIF required. Connect wallet first.');
+      }
       const userSeed = `${crypto.randomUUID()}:${Date.now()}`;
       const nonce = crypto.randomUUID().slice(0, 12);
       const commitmentHash = await hash256Hex(`${userSeed}:${nonce}`);
@@ -52,7 +75,19 @@ export default function CommitPage() {
       </p>
 
       <div className="mt-6 rounded-2xl border border-border bg-card p-5">
-        <Button onClick={commitPack} disabled={loading}>{loading ? 'Committing...' : 'Lock Bounty Pack (0.001 BCH)'}</Button>
+        <div className="flex flex-col gap-3 md:flex-row md:items-center">
+          <input
+            value={wifInput}
+            onChange={(e) => setWifInput(e.target.value)}
+            className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm md:max-w-md"
+            placeholder="Paste chipnet/testnet WIF (demo only)"
+          />
+          <Button variant="outline" onClick={connectWallet}>Connect WIF</Button>
+          <Button onClick={commitPack} disabled={loading}>{loading ? 'Committing...' : 'Lock Bounty Pack (0.001 BCH)'}</Button>
+        </div>
+        <p className="mt-3 text-xs text-zinc-400">
+          {connectedAddress || 'No wallet connected on this browser yet.'}
+        </p>
       </div>
 
       {pending && (
