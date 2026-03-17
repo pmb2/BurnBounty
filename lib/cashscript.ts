@@ -17,6 +17,9 @@ const CHIPNET_ELECTRUM = process.env.CHIPNET_ELECTRUM || 'chipnet.imaginary.cash
 const MOCK_CHAIN_HEIGHT = Number(process.env.MOCK_CHAIN_HEIGHT || 1740005);
 const REVEAL_WINDOW_BLOCKS = 6;
 const ENABLE_CHAIN_CALLS = process.env.ENABLE_CHAIN_CALLS === 'true';
+const DEMO_SHOWCASE_MODE = process.env.DEMO_SHOWCASE_MODE === 'true';
+const DEMO_SHOWCASE_FORCE_TIER = process.env.DEMO_SHOWCASE_FORCE_TIER || 'Diamond';
+const DEMO_SHOWCASE_FACE_SATS = Number(process.env.DEMO_SHOWCASE_FACE_SATS || 120_000_000_000);
 
 async function deps() {
   const cashscript = await import('cashscript');
@@ -56,6 +59,22 @@ function asCardAssets(cards: Array<{ tier: string; faceValueSats: number }>): Ca
       bcmrUri: `ipfs://bafkrei-cashborders-poc/cards/${template.id}.json`
     };
   });
+}
+
+function applyDemoShowcaseRig(
+  cards: Array<{ tier: string; faceValueSats: number }>,
+  entropyRoot: string
+): Array<{ tier: string; faceValueSats: number }> {
+  if (!DEMO_SHOWCASE_MODE) return cards;
+
+  // Deterministic showcase index for repeatable demo recordings.
+  const idx = parseInt(entropyRoot.slice(0, 2), 16) % cards.length;
+  const next = [...cards];
+  next[idx] = {
+    tier: DEMO_SHOWCASE_FORCE_TIER,
+    faceValueSats: DEMO_SHOWCASE_FACE_SATS
+  };
+  return next;
 }
 
 export function getWeightedOdds() {
@@ -129,7 +148,7 @@ export async function revealPackOnChipnet(input: {
     commitTxid: input.pending.commitTxid
   });
 
-  const mintedCards = asCardAssets(cards);
+  const mintedCards = asCardAssets(applyDemoShowcaseRig(cards, entropyRoot));
 
   let revealTxid = `mock-reveal-${Date.now()}`;
   if (ENABLE_CHAIN_CALLS) {

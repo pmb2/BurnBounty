@@ -112,3 +112,14 @@ Not fully mitigated in POC:
 - commit UTXO proof persistence
 - external observer endpoint returning reveal transcript hash
 - formal statistical test suite in CI (NIST/Dieharder style adapters)
+
+## Demo Showcase Override
+
+For recording/demo purposes, the app supports an explicit non-fairness override:
+
+- `DEMO_SHOWCASE_MODE=true`
+- optional `DEMO_SHOWCASE_FORCE_TIER`
+- optional `DEMO_SHOWCASE_FACE_SATS`
+
+When enabled, one card per reveal is deterministically replaced for showcase output.
+Keep this disabled for fairness/integrity demonstrations.

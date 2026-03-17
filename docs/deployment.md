@@ -19,6 +19,7 @@ From `.env.example`:
 - `TOKEN_CATEGORY`
 - `REVEAL_WINDOW_BLOCKS`
 - `ENABLE_CHAIN_CALLS` (`false` for demo fallback, `true` for real chipnet calls)
+- `DEMO_SHOWCASE_MODE` (`true` only for scripted demo recording)
 
 ## Compile Contracts
 

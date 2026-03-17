@@ -48,6 +48,22 @@ Open `http://localhost:3000`.
 `ENABLE_CHAIN_CALLS` defaults to `false` for stable demo/testing mode.
 Set `ENABLE_CHAIN_CALLS=true` only when chipnet contract UTXOs and environment are fully configured.
 
+## Demo Showcase Mode (for recording)
+
+To force a deterministic high-tier pull for video demos:
+
+1. In `.env.local` set:
+   - `DEMO_SHOWCASE_MODE=true`
+   - optionally tune `DEMO_SHOWCASE_FORCE_TIER` and `DEMO_SHOWCASE_FACE_SATS`
+2. Run app/server normally.
+3. Run:
+
+```bash
+TEST_USER_WIF=<chipnet_wif> npm run test:demo-flow
+```
+
+This mode is for presentation only and should remain `false` in fairness testing.
+
 ## Odds Table (Public)
 
 | Tier | Odds | Face Value Range |

@@ -6,6 +6,10 @@ Format inspired by Keep a Changelog and semantic versioning.
 
 ## [Unreleased]
 
+### Added
+- demo showcase mode with deterministic forced high-tier pull for recording
+- `test:demo-flow` script for repeatable demo validation
+
 ### Fixed
 - corrected RNG rejection sampling to 64-bit draws for large tier ranges
 - added demo-safe `ENABLE_CHAIN_CALLS=false` path to avoid runtime chain dependency issues in local testing

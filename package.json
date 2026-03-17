@@ -16,6 +16,7 @@
     "contracts:compile": "tsx scripts/compile.ts",
     "contracts:deploy": "tsx scripts/deploy.ts",
     "test:flow": "tsx scripts/test-flow.ts",
+    "test:demo-flow": "tsx scripts/demo-showcase-flow.ts",
     "gen:cards": "tsx scripts/generate-card-assets.ts"
   },
   "dependencies": {
