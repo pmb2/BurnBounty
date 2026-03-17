@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/ui/button';
 import type { CardAsset } from '@/types/cards';
+import { toast } from 'sonner';
 
 export default function CollectionPage() {
   const [cards, setCards] = useState<CardAsset[]>([]);
@@ -34,6 +35,11 @@ export default function CollectionPage() {
       localStorage.setItem('cashborders.totalRedeemed', String(prior + json.payout));
       const housePrior = Number(localStorage.getItem('cashborders.houseProfit') || '0');
       localStorage.setItem('cashborders.houseProfit', String(housePrior + json.houseCut));
+      toast.success('Card redeemed', {
+        description: `Payout ${(json.payout / 1e8).toFixed(8)} BCH, house ${(json.houseCut / 1e8).toFixed(8)} BCH`
+      });
+    } catch (err: any) {
+      toast.error('Redeem failed', { description: err.message || 'Unknown redeem error' });
     } finally {
       setRedeeming(null);
     }

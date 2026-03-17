@@ -26,3 +26,31 @@ body {
     linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
   background-size: 48px 48px;
 }
+
+.magic-dot {
+  position: absolute;
+  top: -10%;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 30%, #fff, #67e8f9 55%, rgba(103, 232, 249, 0));
+  filter: drop-shadow(0 0 12px rgba(103, 232, 249, 0.8));
+  animation: magic-fall linear infinite;
+}
+
+@keyframes magic-fall {
+  0% {
+    transform: translateY(-10%) translateX(0) scale(0.7);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(120vh) translateX(24px) scale(1.2);
+    opacity: 0;
+  }
+}

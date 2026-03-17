@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 async function hash256Hex(input: string): Promise<string> {
   const bytes = new TextEncoder().encode(input);
@@ -33,6 +34,11 @@ export default function CommitPage() {
       const stash = { userSeed, nonce, pending: json };
       localStorage.setItem('cashborders.pendingReveal', JSON.stringify(stash));
       setPending(stash);
+      toast.success('Pack committed', {
+        description: `Commit tx created. Reveal before block ${json.revealDeadline}.`
+      });
+    } catch (err: any) {
+      toast.error('Commit failed', { description: err.message || 'Unknown commit error' });
     } finally {
       setLoading(false);
     }
