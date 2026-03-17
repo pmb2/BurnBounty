@@ -32,10 +32,11 @@ for (const card of CARD_TEMPLATES) {
   <circle cx="384" cy="450" r="270" fill="url(#g)"/>
   <text x="384" y="104" fill="${t.border}" font-size="38" font-family="Georgia, serif" text-anchor="middle" letter-spacing="2">${card.tier.toUpperCase()}</text>
   <text x="384" y="872" fill="#f8fafc" font-size="48" font-family="Georgia, serif" text-anchor="middle">${card.name}</text>
-  <text x="384" y="935" fill="#9ca3af" font-size="24" font-family="monospace" text-anchor="middle">CashBorders • BCH • POC</text>
+  <text x="384" y="935" fill="#9ca3af" font-size="24" font-family="monospace" text-anchor="middle">BurnBounty • BCH • POC</text>
 </svg>`;
 
   writeFileSync(path.join(outDir, path.basename(card.image)), svg);
 }
 
 console.log(`Generated ${CARD_TEMPLATES.length} card SVG files in ${outDir}`);
+

@@ -3,43 +3,44 @@
   "version": { "major": 0, "minor": 1, "patch": 0 },
   "latestRevision": "2026-03-17T00:00:00.000Z",
   "registryIdentity": {
-    "name": "CashBorders POC Registry",
-    "description": "POC BCMR metadata for CashBorders collectible CashToken NFTs",
+    "name": "BurnBounty POC Registry",
+    "description": "POC BCMR metadata for BurnBounty collectible CashToken NFTs",
     "uris": {
-      "icon": "ipfs://bafkrei-cashborders-poc/icon.png",
-      "web": "https://cashborders.local"
+      "icon": "ipfs://bafkrei-burnbounty-poc/icon.png",
+      "web": "https://burnbounty.local"
     }
   },
   "identities": {
-    "cashborders-poc": {
-      "name": "CashBorders",
+    "burnbounty-poc": {
+      "name": "BurnBounty",
       "description": "Collectible BCH utility cards on chipnet",
       "token": {
         "category": "0x0000000000000000000000000000000000000000000000000000000000000000"
       },
       "uris": {
-        "icon": "ipfs://bafkrei-cashborders-poc/icon.png",
-        "banner": "ipfs://bafkrei-cashborders-poc/banner.png"
+        "icon": "ipfs://bafkrei-burnbounty-poc/icon.png",
+        "banner": "ipfs://bafkrei-burnbounty-poc/banner.png"
       }
     }
   },
   "tokens": {
     "0x0000000000000000000000000000000000000000000000000000000000000000": {
-      "name": "CashBorders Pack Cards",
+      "name": "BurnBounty Pack Cards",
       "description": "NFT cards with commitment-embedded tier + face value; burn for 80% BCH payout.",
       "uris": {
-        "icon": "ipfs://bafkrei-cashborders-poc/icon.png",
-        "web": "https://cashborders.local"
+        "icon": "ipfs://bafkrei-burnbounty-poc/icon.png",
+        "web": "https://burnbounty.local"
       },
       "extensions": {
-        "cashborders": {
+        "burnbounty": {
           "packSize": 5,
           "redeemRate": 0.8,
           "tiers": ["Bronze", "Silver", "Gold", "Diamond"],
           "odds": { "Bronze": 70, "Silver": 20, "Gold": 8, "Diamond": 2 },
-          "cards": "ipfs://bafkrei-cashborders-poc/cards/index.json"
+          "cards": "ipfs://bafkrei-burnbounty-poc/cards/index.json"
         }
       }
     }
   }
 }
+

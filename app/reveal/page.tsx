@@ -19,7 +19,7 @@ export default function RevealPage() {
   const revealContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const raw = localStorage.getItem('cashborders.pendingReveal');
+    const raw = localStorage.getItem('burnbounty.pendingReveal');
     setStash(raw ? JSON.parse(raw) : null);
   }, []);
 
@@ -47,7 +47,7 @@ export default function RevealPage() {
     if (!stash) return;
     setLoading(true);
     try {
-      const wif = localStorage.getItem('cashborders.wif') || '';
+      const wif = localStorage.getItem('burnbounty.wif') || '';
       const res = await fetch('/api/reveal-pack', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -62,10 +62,10 @@ export default function RevealPage() {
       if (!res.ok) throw new Error(json.error || 'Reveal failed');
       setResult(json);
 
-      const prior = localStorage.getItem('cashborders.collection');
+      const prior = localStorage.getItem('burnbounty.collection');
       const cards = prior ? JSON.parse(prior) : [];
-      localStorage.setItem('cashborders.collection', JSON.stringify([...cards, ...json.cards]));
-      localStorage.removeItem('cashborders.pendingReveal');
+      localStorage.setItem('burnbounty.collection', JSON.stringify([...cards, ...json.cards]));
+      localStorage.removeItem('burnbounty.pendingReveal');
     } catch (err: any) {
       toast.error('Reveal failed', { description: err.message || 'Unknown reveal error' });
     } finally {
@@ -125,3 +125,4 @@ export default function RevealPage() {
     </main>
   );
 }
+

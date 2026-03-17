@@ -56,7 +56,7 @@ function asCardAssets(cards: Array<{ tier: string; faceValueSats: number }>): Ca
       payoutBch: satsToBch(Math.floor(entry.faceValueSats * 0.8)),
       serial: nftId.slice(0, 12).toUpperCase(),
       image: template.image,
-      bcmrUri: `ipfs://bafkrei-cashborders-poc/cards/${template.id}.json`
+      bcmrUri: `ipfs://bafkrei-burnbounty-poc/cards/${template.id}.json`
     };
   });
 }
@@ -237,3 +237,4 @@ export async function redeemCardOnChipnet(userWif: string, card: CardAsset) {
 
   return { txid, payout, houseCut };
 }
+

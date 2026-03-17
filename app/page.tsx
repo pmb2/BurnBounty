@@ -10,7 +10,7 @@ export default function HomePage() {
           <p className="inline-block rounded-full border border-border px-3 py-1 text-xs uppercase tracking-[0.22em] text-emerald-300">
             BCH Chipnet POC
           </p>
-          <h1 className="text-5xl font-black leading-tight">CashBorders</h1>
+          <h1 className="text-5xl font-black leading-tight">BurnBounty</h1>
           <p className="max-w-xl text-lg text-zinc-300">
             Commit a pack purchase, reveal deterministic on-chain randomness, receive 5 collectible CashToken cards, and
             burn any card for 80% BCH.
@@ -25,3 +25,4 @@ export default function HomePage() {
     </main>
   );
 }
+

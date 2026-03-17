@@ -1,8 +1,8 @@
-# CashBorders
+# BurnBounty
 
 <div align="center">
 
-![CashBorders Banner](https://via.placeholder.com/1200x400/1a1a2e/ffffff?text=CashBorders+-+Own+the+Cards.+Burn+for+BCH.)
+![BurnBounty Banner](https://via.placeholder.com/1200x400/1a1a2e/ffffff?text=BurnBounty+-+Own+the+Cards.+Burn+for+BCH.)
 
 **Own the cards. Burn for BCH. Or build your legendary collection.**
 
@@ -20,9 +20,9 @@ A fully on-chain digital trading card pack system on **Bitcoin Cash** using nati
 
 ---
 
-## What is CashBorders?
+## What is BurnBounty?
 
-CashBorders turns **digital collectible cards** into a self-sustaining economy on Bitcoin Cash.
+BurnBounty turns **digital collectible cards** into a self-sustaining economy on Bitcoin Cash.
 
 - Buy a **5-card pack** for a fixed BCH price.
 - Receive 5 designed NFTs with **embedded BCH face values** and static rarity borders.
@@ -183,3 +183,4 @@ See:
 **Made for the Bitcoin Cash community**
 
 </div>
+

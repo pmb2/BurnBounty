@@ -19,7 +19,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div>
       <header className="sticky top-0 z-10 border-b border-border/70 bg-[#081423]/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <Link href="/" className="text-lg font-black tracking-wide">CashBorders</Link>
+          <Link href="/" className="text-lg font-black tracking-wide">BurnBounty</Link>
           <nav className="hidden gap-2 md:flex">
             {links.map((l) => (
               <Link
@@ -41,3 +41,4 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+

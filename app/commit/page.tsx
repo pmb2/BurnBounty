@@ -18,7 +18,7 @@ export default function CommitPage() {
   async function commitPack() {
     setLoading(true);
     try {
-      const wif = localStorage.getItem('cashborders.wif') || '';
+      const wif = localStorage.getItem('burnbounty.wif') || '';
       const userSeed = `${crypto.randomUUID()}:${Date.now()}`;
       const nonce = crypto.randomUUID().slice(0, 12);
       const commitmentHash = await hash256Hex(`${userSeed}:${nonce}`);
@@ -32,7 +32,7 @@ export default function CommitPage() {
       if (!res.ok) throw new Error(json.error || 'Commit failed');
 
       const stash = { userSeed, nonce, pending: json };
-      localStorage.setItem('cashborders.pendingReveal', JSON.stringify(stash));
+      localStorage.setItem('burnbounty.pendingReveal', JSON.stringify(stash));
       setPending(stash);
       toast.success('Pack committed', {
         description: `Commit tx created. Reveal before block ${json.revealDeadline}.`
@@ -66,3 +66,4 @@ export default function CommitPage() {
     </main>
   );
 }
+

@@ -15,7 +15,7 @@ Behavior:
 1. Generate `userSeed` and `nonce` client-side.
 2. Compute `commitmentHash = hash256(userSeed:nonce)`.
 3. Submit to `/api/commit-pack`.
-4. Persist pending state in local storage key `cashborders.pendingReveal`.
+4. Persist pending state in local storage key `burnbounty.pendingReveal`.
 
 ## Reveal Page
 
@@ -24,7 +24,7 @@ Behavior:
 1. Load pending state from local storage.
 2. Submit reveal payload to `/api/reveal-pack`.
 3. Display card animation and transparency transcript.
-4. Persist cards to `cashborders.collection`.
+4. Persist cards to `burnbounty.collection`.
 5. Clear pending reveal key.
 
 Transparency panel displays:
@@ -55,3 +55,4 @@ Displays local aggregate counters:
 - Wallet connector is demo WIF only.
 - UI explicitly warns against mainnet/private production key use.
 - Flow intentionally favors transparency over gamified opacity.
+

@@ -6,7 +6,7 @@ import { Button } from './ui/button';
 
 export function WalletConnect() {
   const [wif, setWif] = useState('');
-  const [savedWif, setSavedWif] = useState(typeof window === 'undefined' ? '' : (localStorage.getItem('cashborders.wif') || ''));
+  const [savedWif, setSavedWif] = useState(typeof window === 'undefined' ? '' : (localStorage.getItem('burnbounty.wif') || ''));
   const address = useMemo(() => {
     if (!savedWif) return '';
     try {
@@ -17,7 +17,7 @@ export function WalletConnect() {
   }, [savedWif]);
 
   function save() {
-    localStorage.setItem('cashborders.wif', wif.trim());
+    localStorage.setItem('burnbounty.wif', wif.trim());
     setSavedWif(wif.trim());
     setWif('');
   }
@@ -35,3 +35,4 @@ export function WalletConnect() {
     </div>
   );
 }
+

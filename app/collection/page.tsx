@@ -11,14 +11,14 @@ export default function CollectionPage() {
   const [redeeming, setRedeeming] = useState<string | null>(null);
 
   useEffect(() => {
-    const raw = localStorage.getItem('cashborders.collection');
+    const raw = localStorage.getItem('burnbounty.collection');
     setCards(raw ? JSON.parse(raw) : []);
   }, []);
 
   async function redeem(card: CardAsset) {
     setRedeeming(card.nftId);
     try {
-      const wif = localStorage.getItem('cashborders.wif') || '';
+      const wif = localStorage.getItem('burnbounty.wif') || '';
       const res = await fetch('/api/redeem', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -29,12 +29,12 @@ export default function CollectionPage() {
 
       const nextCards = cards.filter((c) => c.nftId !== card.nftId);
       setCards(nextCards);
-      localStorage.setItem('cashborders.collection', JSON.stringify(nextCards));
+      localStorage.setItem('burnbounty.collection', JSON.stringify(nextCards));
 
-      const prior = Number(localStorage.getItem('cashborders.totalRedeemed') || '0');
-      localStorage.setItem('cashborders.totalRedeemed', String(prior + json.payout));
-      const housePrior = Number(localStorage.getItem('cashborders.houseProfit') || '0');
-      localStorage.setItem('cashborders.houseProfit', String(housePrior + json.houseCut));
+      const prior = Number(localStorage.getItem('burnbounty.totalRedeemed') || '0');
+      localStorage.setItem('burnbounty.totalRedeemed', String(prior + json.payout));
+      const housePrior = Number(localStorage.getItem('burnbounty.houseProfit') || '0');
+      localStorage.setItem('burnbounty.houseProfit', String(housePrior + json.houseCut));
       toast.success('Card redeemed', {
         description: `Payout ${(json.payout / 1e8).toFixed(8)} BCH, house ${(json.houseCut / 1e8).toFixed(8)} BCH`
       });
@@ -64,3 +64,4 @@ export default function CollectionPage() {
     </main>
   );
 }
+

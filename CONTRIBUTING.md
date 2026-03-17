@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for contributing to CashBorders.
+Thanks for contributing to BurnBounty.
 
 ## Development Setup
 
@@ -52,3 +52,4 @@ TEST_USER_WIF=<chipnet_wif> npm run test:flow
 ## Security
 
 For vulnerabilities, follow `.github/SECURITY.md`.
+

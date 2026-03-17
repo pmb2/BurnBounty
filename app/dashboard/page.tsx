@@ -7,8 +7,8 @@ export default function DashboardPage() {
   const [house, setHouse] = useState(0);
 
   useEffect(() => {
-    const r = Number(localStorage.getItem('cashborders.totalRedeemed') || '0');
-    const h = Number(localStorage.getItem('cashborders.houseProfit') || '0');
+    const r = Number(localStorage.getItem('burnbounty.totalRedeemed') || '0');
+    const h = Number(localStorage.getItem('burnbounty.houseProfit') || '0');
     setRedeemed(r);
     setHouse(h);
   }, []);

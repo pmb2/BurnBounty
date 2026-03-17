@@ -34,11 +34,11 @@ POC state is mixed:
 
 Key local storage keys:
 
-- `cashborders.wif`
-- `cashborders.pendingReveal`
-- `cashborders.collection`
-- `cashborders.totalRedeemed`
-- `cashborders.houseProfit`
+- `burnbounty.wif`
+- `burnbounty.pendingReveal`
+- `burnbounty.collection`
+- `burnbounty.totalRedeemed`
+- `burnbounty.houseProfit`
 
 ## Trust Boundaries
 
@@ -80,3 +80,4 @@ Redeem:
 - Replace mock block hash references with chain-indexed values.
 - Add covenant state proofs and strict UTXO tracking.
 - Integrate robust wallet standard, remove raw WIF UX.
+

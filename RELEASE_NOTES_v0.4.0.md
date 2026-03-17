@@ -1,4 +1,4 @@
-## CashBorders v0.4.0
+## BurnBounty v0.4.0
 
 This release delivers the full commit/reveal architecture with upgraded deterministic RNG and complete open-source repo polish.
 
@@ -33,3 +33,4 @@ This release delivers the full commit/reveal architecture with upgraded determin
 - Chipnet/testnet demo mode.
 - Wallet input is raw WIF for POC only. Never use mainnet private keys.
 - Legal review required prior to any production/mainnet rollout.
+

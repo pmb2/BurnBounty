@@ -1,6 +1,6 @@
 # System Overview
 
-This documentation set describes the full CashBorders POC implementation and intended operator/developer behavior.
+This documentation set describes the full BurnBounty POC implementation and intended operator/developer behavior.
 
 ## Project Goals
 
@@ -66,3 +66,4 @@ This aligns with v0.4 requirements:
 - commit/reveal flow
 - upgraded RNG model
 - public verification parity
+
