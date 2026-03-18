@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -11,6 +12,7 @@ import { ImmersiveAssetStatus } from '@/components/ImmersiveAssetStatus';
 import { Button } from '@/components/ui/button';
 import { normalizeCardAsset } from '@/lib/cards';
 import type { CardAsset } from '@/types/cards';
+import type { MarketCardSnapshot, MarketListing } from '@/lib/profile-data';
 
 type ArmoryTab = 'inventory' | 'market' | 'ledger';
 type SortOption =
@@ -50,12 +52,13 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
   const [redeeming, setRedeeming] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>('newest');
 
-  const [listings, setListings] = useState<any[]>([]);
+  const [listings, setListings] = useState<MarketListing[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [session, setSession] = useState<MeResponse | null>(null);
   const [selectedCardId, setSelectedCardId] = useState('');
   const [price, setPrice] = useState('100000');
   const [note, setNote] = useState('');
+  const [buyingListingId, setBuyingListingId] = useState<string | null>(null);
 
   const [redeemed, setRedeemed] = useState(0);
   const [house, setHouse] = useState(0);
@@ -151,6 +154,8 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
         throw new Error('Primary wallet not available. Link a wallet in Auth Hub first.');
       }
       if (!selectedCardId) throw new Error('Select a card first.');
+      const selectedCard = cards.find((entry) => entry.nftId === selectedCardId);
+      if (!selectedCard) throw new Error('Selected card is no longer available.');
       const priceSats = Number(price);
       if (!Number.isFinite(priceSats) || priceSats <= 0) {
         throw new Error('Price must be a positive number of sats.');
@@ -162,6 +167,16 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
           seller_address: sellerAddress,
           card_id: selectedCardId,
           price_sats: priceSats,
+          card_snapshot: {
+            nftId: selectedCard.nftId,
+            name: selectedCard.name,
+            tier: selectedCard.tier,
+            image: selectedCard.image,
+            faceValueSats: selectedCard.faceValueSats,
+            weeklyDriftMilli: selectedCard.weeklyDriftMilli,
+            randomCapWeeks: selectedCard.randomCapWeeks,
+            payoutSats: selectedCard.payoutSats
+          },
           note
         })
       });
@@ -183,6 +198,61 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
       setListings(payload.listings || []);
     } catch (err: any) {
       toast.error('Listing failed', { description: err.message || 'Unknown error' });
+    }
+  }
+
+  async function buyListing(listing: MarketListing) {
+    setBuyingListingId(listing.id);
+    try {
+      const buyerAddress = session?.primaryWallet?.address || session?.wallets?.[0]?.address;
+      if (!buyerAddress) {
+        throw new Error('Link a wallet in Auth Hub before buying.');
+      }
+      const res = await fetch(`/api/trading/listings/${encodeURIComponent(listing.id)}/buy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ buyer_address: buyerAddress })
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Buy failed');
+
+      const purchasedSnapshot = (json?.listing?.card_snapshot || listing.card_snapshot || null) as
+        | MarketCardSnapshot
+        | null;
+      if (purchasedSnapshot) {
+        const imported = normalizeCardAsset({
+          nftId: purchasedSnapshot.nftId,
+          name: purchasedSnapshot.name,
+          tier: purchasedSnapshot.tier,
+          image: purchasedSnapshot.image,
+          faceValueSats: purchasedSnapshot.faceValueSats,
+          originalFaceValueSats: purchasedSnapshot.faceValueSats,
+          payoutSats: purchasedSnapshot.payoutSats || Math.floor(purchasedSnapshot.faceValueSats * 0.8),
+          weeklyDriftMilli: purchasedSnapshot.weeklyDriftMilli,
+          randomCapWeeks: purchasedSnapshot.randomCapWeeks,
+          series: 'NORMAL',
+          categoryId: 'market-import',
+          commitmentHex: '',
+          bcmrUri: `ipfs://burnbounty/market/${purchasedSnapshot.nftId}.json`
+        });
+
+        const next = [...cards];
+        if (!next.some((entry) => entry.nftId === imported.nftId)) {
+          next.unshift(imported);
+          setCards(next);
+          localStorage.setItem('burnbounty.collection', JSON.stringify(next));
+          if (!selectedCardId) setSelectedCardId(imported.nftId);
+        }
+      }
+
+      setListings((prev) => prev.filter((entry) => entry.id !== listing.id));
+      toast.success('Listing purchased', {
+        description: `You bought ${(listing.price_sats / 1e8).toFixed(8)} BCH bounty card.`
+      });
+    } catch (err: any) {
+      toast.error('Buy failed', { description: err.message || 'Unknown error' });
+    } finally {
+      setBuyingListingId(null);
     }
   }
 
@@ -311,24 +381,69 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
             </div>
             <Button className="mt-3" onClick={createListing}>List Card</Button>
 
-            <div className="mt-6 space-y-2">
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
               {listings.map((l) => (
-                <article key={l.id} className="rounded border border-border/70 bg-black/20 p-3 text-sm">
+                <article key={l.id} className="overflow-hidden rounded-xl border border-border/70 bg-black/30 text-sm">
                   {(() => {
-                    const listedCard = cardById.get(l.card_id);
-                    if (listedCard) {
-                      return (
-                        <>
-                          <p><span className="text-zinc-400">Card:</span> {listedCard.name} ({listedCard.tier})</p>
-                          <p><span className="text-zinc-400">Stats:</span> {(listedCard.faceValueSats / 1e8).toFixed(4)} BCH • {listedCard.weeklyDriftMilli >= 0 ? '+' : ''}{(listedCard.weeklyDriftMilli / 10).toFixed(1)}%/wk • cap {(listedCard.randomCapWeeks / 52).toFixed(1)}y</p>
-                        </>
-                      );
-                    }
-                    return <p><span className="text-zinc-400">Card:</span> Unknown card ({String(l.card_id).slice(0, 16)}...)</p>;
+                    const listedCard = (l.card_snapshot
+                      ? normalizeCardAsset({
+                          nftId: l.card_snapshot.nftId,
+                          name: l.card_snapshot.name,
+                          tier: l.card_snapshot.tier,
+                          image: l.card_snapshot.image,
+                          faceValueSats: l.card_snapshot.faceValueSats,
+                          originalFaceValueSats: l.card_snapshot.faceValueSats,
+                          payoutSats: l.card_snapshot.payoutSats || Math.floor(l.card_snapshot.faceValueSats * 0.8),
+                          weeklyDriftMilli: l.card_snapshot.weeklyDriftMilli,
+                          randomCapWeeks: l.card_snapshot.randomCapWeeks,
+                          series: 'NORMAL',
+                          categoryId: 'market-snapshot',
+                          commitmentHex: '',
+                          bcmrUri: `ipfs://burnbounty/market/${l.card_snapshot.nftId}.json`
+                        })
+                      : cardById.get(l.card_id) || null) as CardAsset | null;
+
+                    return (
+                      <>
+                        <div className="relative h-56">
+                          <Image
+                            src={listedCard?.image || '/cards/3LjTX.jpg'}
+                            alt={listedCard?.name || 'Listed card'}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                        <div className="space-y-1 p-3">
+                          <p className="font-semibold">{listedCard?.name || 'Unknown Card'}</p>
+                          <p className="text-xs text-zinc-400">
+                            {listedCard
+                              ? `${listedCard.tier} • ${(listedCard.faceValueSats / 1e8).toFixed(4)} BCH • ${listedCard.weeklyDriftMilli >= 0 ? '+' : ''}${(listedCard.weeklyDriftMilli / 10).toFixed(1)}%/wk • cap ${(listedCard.randomCapWeeks / 52).toFixed(1)}y`
+                              : `Card ref ${String(l.card_id).slice(0, 16)}...`}
+                          </p>
+                          <p><span className="text-zinc-400">Price:</span> {(Number(l.price_sats) / 1e8).toFixed(8)} BCH</p>
+                          <p><span className="text-zinc-400">Seller:</span> {l.seller_address}</p>
+                          {l.note && <p><span className="text-zinc-400">Note:</span> {l.note}</p>}
+                          <Button
+                            className="mt-2 w-full"
+                            onClick={() => buyListing(l)}
+                            disabled={
+                              buyingListingId === l.id ||
+                              !session?.ok ||
+                              session?.primaryWallet?.address === l.seller_address ||
+                              session?.wallets?.some((wallet) => wallet.address === l.seller_address)
+                            }
+                          >
+                            {buyingListingId === l.id
+                              ? 'Buying...'
+                              : session?.primaryWallet?.address === l.seller_address ||
+                                  session?.wallets?.some((wallet) => wallet.address === l.seller_address)
+                                ? 'Your Listing'
+                                : 'Buy Card'}
+                          </Button>
+                        </div>
+                      </>
+                    );
                   })()}
-                  <p><span className="text-zinc-400">Price:</span> {(Number(l.price_sats) / 1e8).toFixed(8)} BCH</p>
-                  <p><span className="text-zinc-400">Seller:</span> {l.seller_address}</p>
-                  {l.note && <p><span className="text-zinc-400">Note:</span> {l.note}</p>}
                 </article>
               ))}
               {listings.length === 0 && <p className="text-zinc-400">No listings yet.</p>}

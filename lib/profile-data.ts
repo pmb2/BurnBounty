@@ -1,6 +1,31 @@
 import type { CardAsset } from '@/types/cards';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { dbQuery } from '@/lib/db/postgres';
+import { dbQuery, dbTx } from '@/lib/db/postgres';
+
+export type MarketCardSnapshot = {
+  nftId: string;
+  name: string;
+  tier: 'Bronze' | 'Silver' | 'Gold' | 'Diamond';
+  image: string;
+  faceValueSats: number;
+  weeklyDriftMilli: number;
+  randomCapWeeks: number;
+  payoutSats?: number;
+};
+
+export type MarketListing = {
+  id: string;
+  seller_address: string;
+  buyer_address?: string | null;
+  card_id: string;
+  price_sats: number;
+  note?: string | null;
+  expires_at?: string | null;
+  created_at?: string;
+  sold_at?: string | null;
+  status?: 'active' | 'sold' | string;
+  card_snapshot?: MarketCardSnapshot | null;
+};
 
 const fallbackProfiles = [
   { address: 'bitcoincash:qzsamplehunter1', display_name: 'Dust Ranger', bio: 'Bronze grinder on the frontier.', score: 42 },
@@ -32,13 +57,16 @@ export async function getProfile(address: string) {
   };
 }
 
-export async function listTradingListings() {
+export async function listTradingListings(includeSold = false): Promise<MarketListing[]> {
   try {
     const { rows } = await dbQuery(
-      `select id::text, seller_address, card_id, price_sats::text as price_sats, note, expires_at, created_at
+      `select id::text, seller_address, buyer_address, card_id, price_sats::text as price_sats,
+              note, expires_at, created_at, sold_at, status, card_snapshot
        from market_listings
+       where ($1::boolean = true or status = 'active')
        order by created_at desc
-       limit 50`
+       limit 50`,
+      [includeSold]
     );
     return rows.map((row: any) => ({
       ...row,
@@ -52,13 +80,28 @@ export async function listTradingListings() {
   }
 }
 
-export async function createTradingListing(input: { seller_address: string; card_id: string; price_sats: number; note?: string; expires_at?: string }) {
+export async function createTradingListing(input: {
+  seller_address: string;
+  card_id: string;
+  price_sats: number;
+  card_snapshot?: MarketCardSnapshot;
+  note?: string;
+  expires_at?: string;
+}): Promise<MarketListing> {
   try {
     const { rows } = await dbQuery(
-      `insert into market_listings (seller_address, card_id, price_sats, note, expires_at)
-       values ($1, $2, $3, $4, $5)
-       returning id::text, seller_address, card_id, price_sats::text as price_sats, note, expires_at, created_at`,
-      [input.seller_address, input.card_id, input.price_sats, input.note || null, input.expires_at || null]
+      `insert into market_listings (seller_address, card_id, price_sats, card_snapshot, note, expires_at, status)
+       values ($1, $2, $3, $4::jsonb, $5, $6, 'active')
+       returning id::text, seller_address, buyer_address, card_id, price_sats::text as price_sats,
+                 card_snapshot, note, expires_at, created_at, sold_at, status`,
+      [
+        input.seller_address,
+        input.card_id,
+        input.price_sats,
+        JSON.stringify(input.card_snapshot || null),
+        input.note || null,
+        input.expires_at || null
+      ]
     );
     const row: any = rows[0];
     return { ...row, price_sats: Number(row.price_sats) };
@@ -69,4 +112,61 @@ export async function createTradingListing(input: { seller_address: string; card
     if (error) throw error;
     return data;
   }
+}
+
+export async function buyTradingListing(input: {
+  listingId: string;
+  buyerAddress: string;
+}): Promise<MarketListing> {
+  return dbTx(async (client) => {
+    const { rows } = await client.query(
+      `select id::text, seller_address, buyer_address, card_id, price_sats::text as price_sats,
+              card_snapshot, note, expires_at, created_at, sold_at, status
+       from market_listings
+       where id = $1
+       limit 1
+       for update`,
+      [input.listingId]
+    );
+
+    if (!rows[0]) {
+      const err = new Error('listing_not_found');
+      (err as any).code = 'listing_not_found';
+      throw err;
+    }
+
+    const listing = rows[0] as any;
+    if (listing.status !== 'active') {
+      const err = new Error('listing_unavailable');
+      (err as any).code = 'listing_unavailable';
+      throw err;
+    }
+
+    if (String(listing.seller_address) === input.buyerAddress) {
+      const err = new Error('cannot_buy_own_listing');
+      (err as any).code = 'cannot_buy_own_listing';
+      throw err;
+    }
+
+    const { rows: updatedRows } = await client.query(
+      `update market_listings
+       set status = 'sold',
+           buyer_address = $2,
+           sold_at = now(),
+           updated_at = now()
+       where id = $1 and status = 'active'
+       returning id::text, seller_address, buyer_address, card_id, price_sats::text as price_sats,
+                 card_snapshot, note, expires_at, created_at, sold_at, status`,
+      [input.listingId, input.buyerAddress]
+    );
+
+    if (!updatedRows[0]) {
+      const err = new Error('listing_unavailable');
+      (err as any).code = 'listing_unavailable';
+      throw err;
+    }
+
+    const updated = updatedRows[0] as any;
+    return { ...updated, price_sats: Number(updated.price_sats) };
+  });
 }

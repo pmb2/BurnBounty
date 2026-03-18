@@ -126,6 +126,10 @@ create table if not exists market_listings (
   seller_address text not null,
   card_id text not null,
   price_sats bigint not null check (price_sats > 0),
+  card_snapshot jsonb,
+  status text not null default 'active',
+  buyer_address text,
+  sold_at timestamptz,
   note text,
   expires_at timestamptz,
   created_at timestamptz not null default now(),
@@ -134,3 +138,9 @@ create table if not exists market_listings (
 
 create index if not exists idx_market_listings_created_at on market_listings(created_at desc);
 create index if not exists idx_market_listings_seller on market_listings(seller_address);
+create index if not exists idx_market_listings_status on market_listings(status);
+
+alter table market_listings add column if not exists card_snapshot jsonb;
+alter table market_listings add column if not exists status text not null default 'active';
+alter table market_listings add column if not exists buyer_address text;
+alter table market_listings add column if not exists sold_at timestamptz;

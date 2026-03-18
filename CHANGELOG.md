@@ -47,6 +47,9 @@ Format inspired by Keep a Changelog and semantic versioning.
   - trading listings now persist in local Postgres (`market_listings`) with Supabase fallback
   - card UI text now follows rarity color theme (Bronze/Silver/Gold/Diamond)
   - serial/ID line replaced by visible stat summary (drift/cap/burn reward)
+  - market tab now renders listing card images and stat snapshots
+  - universal buy flow added (`POST /api/trading/listings/[id]/buy`) for authenticated buyers
+  - listings now transition `active -> sold` with buyer tracking and buy-button UX
 - Home onboarding flow now prioritizes one dominant CTA (`Start Playing`) and defers advanced wallet methods.
 - Auth Hub now defaults to embedded onboarding and gates external/Snap under explicit advanced options.
 - Header wallet state now shows persistent auth status with wallet-type context; gameplay WIF input is collapsed.

@@ -11,12 +11,25 @@ const listingSchema = z.object({
   seller_address: z.string().min(6).optional(),
   card_id: z.string().min(6),
   price_sats: z.number().int().positive(),
+  card_snapshot: z
+    .object({
+      nftId: z.string(),
+      name: z.string(),
+      tier: z.enum(['Bronze', 'Silver', 'Gold', 'Diamond']),
+      image: z.string(),
+      faceValueSats: z.number().int().positive(),
+      weeklyDriftMilli: z.number().int(),
+      randomCapWeeks: z.number().int().nonnegative(),
+      payoutSats: z.number().int().positive().optional()
+    })
+    .optional(),
   note: z.string().optional(),
   expires_at: z.string().optional()
 });
 
-export async function GET() {
-  const listings = await listTradingListings();
+export async function GET(req: NextRequest) {
+  const includeSold = req.nextUrl.searchParams.get('includeSold') === '1';
+  const listings = await listTradingListings(includeSold);
   return NextResponse.json({ listings });
 }
 
@@ -55,10 +68,24 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const cardSnapshot = body.card_snapshot
+      ? {
+          nftId: body.card_snapshot.nftId,
+          name: body.card_snapshot.name,
+          tier: body.card_snapshot.tier,
+          image: body.card_snapshot.image,
+          faceValueSats: body.card_snapshot.faceValueSats,
+          weeklyDriftMilli: body.card_snapshot.weeklyDriftMilli,
+          randomCapWeeks: body.card_snapshot.randomCapWeeks,
+          payoutSats: body.card_snapshot.payoutSats
+        }
+      : undefined;
+
     const created = await createTradingListing({
       seller_address: sellerCanonical,
       card_id: body.card_id,
       price_sats: body.price_sats,
+      card_snapshot: cardSnapshot,
       note: body.note,
       expires_at: body.expires_at
     });

@@ -16,6 +16,7 @@ import { POST as embeddedExportRequestPost } from '@/app/api/auth/wallet/embedde
 import { POST as legacyChallengePost } from '@/app/api/auth/challenge/route';
 import { POST as legacyVerifyPost } from '@/app/api/auth/verify/route';
 import { POST as listingsPost } from '@/app/api/trading/listings/route';
+import { POST as listingBuyPost } from '@/app/api/trading/listings/[id]/buy/route';
 
 function mkReq(url: string, method: 'GET' | 'POST', body?: unknown, cookie?: string) {
   const headers = new Headers();
@@ -418,4 +419,96 @@ test('auth-critical trading listing creation requires durable valid session', as
   assert.equal(createAfterLogout.status, 401);
   const denied = await readJson(createAfterLogout);
   assert.equal(denied.error, 'session_revoked');
+});
+
+test('universal market buy: another authenticated user can buy active listing', async () => {
+  await resetAuthStoreForTests();
+
+  const sellerKey = new (bitcore as any).PrivateKey(undefined, (bitcore as any).Networks.testnet);
+  const sellerAddress = sellerKey.toAddress((bitcore as any).Networks.testnet).toString();
+  const buyerKey = new (bitcore as any).PrivateKey(undefined, (bitcore as any).Networks.testnet);
+  const buyerAddress = buyerKey.toAddress((bitcore as any).Networks.testnet).toString();
+
+  const sellerRegister = await registerPost(
+    mkReq('http://localhost/api/auth/register', 'POST', {
+      username: 'route-market-seller',
+      passphrase: 'route-passphrase-1234'
+    })
+  );
+  const sellerCookie = extractSessionCookie(sellerRegister)!;
+  await embeddedCreatePost(
+    mkReq(
+      'http://localhost/api/auth/wallet/embedded/create',
+      'POST',
+      { address: sellerAddress, walletCreatedAt: new Date().toISOString(), walletVersion: 'v1-client-encrypted' },
+      sellerCookie
+    )
+  );
+
+  const createListingRes = await listingsPost(
+    mkReq(
+      'http://localhost/api/trading/listings',
+      'POST',
+      {
+        seller_address: sellerAddress,
+        card_id: 'card-market-111',
+        price_sats: 222222,
+        card_snapshot: {
+          nftId: 'card-market-111',
+          name: 'Market Test Card',
+          tier: 'Silver',
+          image: '/cards/3LjTX.jpg',
+          faceValueSats: 50000000,
+          weeklyDriftMilli: 2,
+          randomCapWeeks: 30,
+          payoutSats: 40000000
+        }
+      },
+      sellerCookie
+    )
+  );
+  assert.equal(createListingRes.status, 200);
+  const createdBody = await readJson<{ listing: { id: string } }>(createListingRes);
+  assert.ok(createdBody.listing.id);
+
+  const buyerRegister = await registerPost(
+    mkReq('http://localhost/api/auth/register', 'POST', {
+      username: 'route-market-buyer',
+      passphrase: 'route-passphrase-1234'
+    })
+  );
+  const buyerCookie = extractSessionCookie(buyerRegister)!;
+  await embeddedCreatePost(
+    mkReq(
+      'http://localhost/api/auth/wallet/embedded/create',
+      'POST',
+      { address: buyerAddress, walletCreatedAt: new Date().toISOString(), walletVersion: 'v1-client-encrypted' },
+      buyerCookie
+    )
+  );
+
+  const buyRes = await listingBuyPost(
+    mkReq(
+      `http://localhost/api/trading/listings/${createdBody.listing.id}/buy`,
+      'POST',
+      { buyer_address: buyerAddress },
+      buyerCookie
+    ),
+    { params: Promise.resolve({ id: createdBody.listing.id }) }
+  );
+  assert.equal(buyRes.status, 200);
+  const buyBody = await readJson<{ listing: { status: string; buyer_address: string } }>(buyRes);
+  assert.equal(buyBody.listing.status, 'sold');
+  assert.ok(buyBody.listing.buyer_address);
+
+  const rebuyRes = await listingBuyPost(
+    mkReq(
+      `http://localhost/api/trading/listings/${createdBody.listing.id}/buy`,
+      'POST',
+      { buyer_address: buyerAddress },
+      buyerCookie
+    ),
+    { params: Promise.resolve({ id: createdBody.listing.id }) }
+  );
+  assert.equal(rebuyRes.status, 409);
 });
