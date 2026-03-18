@@ -35,6 +35,12 @@ Format inspired by Keep a Changelog and semantic versioning.
 - immersive surfaces upgraded with active telemetry board overlays and motion backdrops.
 - immersive scene now reads `data/3d-assets.json` slots and attempts runtime GLB loading with fallback primitives.
 - Play and Armory now include a live `Immersive Asset Ops` panel showing scene slot readiness (`Live`, `Missing file`, `Placeholder`).
+- Play tab reworked into gameplay hub:
+  - deck assembly with inventory-to-deck swaps
+  - ranked/unranked queue simulation with match history
+  - hunter stats panel (ELO, streak, win rate, total matches)
+  - legacy `/commit` and `/reveal` routes now redirect to `/play`
+  - auth `next` paths updated from `/play?step=...` to `/play`
 - Home onboarding flow now prioritizes one dominant CTA (`Start Playing`) and defers advanced wallet methods.
 - Auth Hub now defaults to embedded onboarding and gates external/Snap under explicit advanced options.
 - Header wallet state now shows persistent auth status with wallet-type context; gameplay WIF input is collapsed.

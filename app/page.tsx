@@ -21,7 +21,7 @@ export default function HomePage() {
           </p>
           <div className="flex flex-wrap gap-3">
             <Link href="/play"><Button size="lg">Start Playing</Button></Link>
-            <Link href="/auth?mode=external&next=/play?step=commit"><Button variant="outline" size="lg">I Have A BCH Wallet</Button></Link>
+            <Link href="/auth?mode=external&next=/play"><Button variant="outline" size="lg">I Have A BCH Wallet</Button></Link>
           </div>
           <p className="text-sm text-zinc-400">
             New players: quick-start uses an embedded wallet. Power users can bring an external BCH wallet.

@@ -247,7 +247,7 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
             </div>
             {sortedCards.length === 0 && (
               <div className="mt-4 rounded-xl border border-border/60 bg-black/30 p-4 text-sm text-zinc-300">
-                No cards in inventory yet. <Link className="text-emerald-300 underline" href="/play?step=commit">Start a pack hunt.</Link>
+                No cards in inventory yet. <Link className="text-emerald-300 underline" href="/play">Build a deck and queue matches.</Link>
               </div>
             )}
           </div>
