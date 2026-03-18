@@ -10,7 +10,7 @@ type AuthPageProps = {
 
 export default function AuthPage({ searchParams }: AuthPageProps) {
   const mode = searchParams?.mode === 'external' || searchParams?.mode === 'snap' ? searchParams.mode : 'embedded';
-  const nextPath = searchParams?.next?.startsWith('/') ? searchParams.next : '/commit';
+  const nextPath = searchParams?.next?.startsWith('/') ? searchParams.next : '/play?step=commit';
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-10">

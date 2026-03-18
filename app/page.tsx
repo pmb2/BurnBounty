@@ -20,8 +20,8 @@ export default function HomePage() {
             turn in any card for an instant 80% BCH reward.
           </p>
           <div className="flex flex-wrap gap-3">
-            <Link href="/auth?mode=embedded&next=/commit"><Button size="lg">Start Playing</Button></Link>
-            <Link href="/auth?mode=external&next=/commit"><Button variant="outline" size="lg">I Have A BCH Wallet</Button></Link>
+            <Link href="/play"><Button size="lg">Start Playing</Button></Link>
+            <Link href="/auth?mode=external&next=/play?step=commit"><Button variant="outline" size="lg">I Have A BCH Wallet</Button></Link>
           </div>
           <p className="text-sm text-zinc-400">
             New players: quick-start uses an embedded wallet. Power users can bring an external BCH wallet.

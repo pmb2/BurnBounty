@@ -45,7 +45,7 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
   return json as T;
 }
 
-export function WalletAuthPanel({ defaultMode = 'embedded', nextPath = '/commit' }: WalletAuthPanelProps) {
+export function WalletAuthPanel({ defaultMode = 'embedded', nextPath = '/play?step=commit' }: WalletAuthPanelProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'embedded' | 'external' | 'snap'>(defaultMode);
   const [showAdvanced, setShowAdvanced] = useState(defaultMode !== 'embedded');

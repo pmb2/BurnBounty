@@ -8,10 +8,8 @@ import { GameGuideModal } from './GameGuideModal';
 
 const links = [
   { href: '/', label: 'Home' },
-  { href: '/commit', label: 'Play' },
-  { href: '/collection', label: 'Inventory' },
-  { href: '/trading', label: 'Market' },
-  { href: '/dashboard', label: 'Profile' },
+  { href: '/play', label: 'Play' },
+  { href: '/armory?tab=inventory', label: 'Armory' },
   { href: '/auth', label: 'Auth' }
 ];
 
@@ -29,7 +27,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 href={l.href}
                 className={cn(
                   'rounded-lg px-3 py-2 text-sm text-zinc-300 transition hover:bg-white/5 hover:text-white',
-                  pathname === l.href && 'bg-white/10 text-white'
+                  (pathname === l.href || (l.href.startsWith('/armory') && pathname.startsWith('/armory'))) &&
+                    'bg-white/10 text-white'
                 )}
               >
                 {l.label}
@@ -43,10 +42,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-border/70 bg-[#0d1118]/95 p-3 backdrop-blur md:hidden">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-2">
           <Link href="/" className="rounded-md border border-border px-3 py-2 text-xs text-zinc-200">Home</Link>
-          <Link href="/commit" className="rounded-md border border-border px-3 py-2 text-xs text-zinc-200">Play</Link>
-          <Link href="/collection" className="rounded-md border border-border px-3 py-2 text-xs text-zinc-200">Inventory</Link>
-          <Link href="/trading" className="rounded-md border border-border px-3 py-2 text-xs text-zinc-200">Market</Link>
-          <Link href="/dashboard" className="rounded-md border border-border px-3 py-2 text-xs text-zinc-200">Profile</Link>
+          <Link href="/play" className="rounded-md border border-border px-3 py-2 text-xs text-zinc-200">Play</Link>
+          <Link href="/armory?tab=inventory" className="rounded-md border border-border px-3 py-2 text-xs text-zinc-200">Armory</Link>
+          <Link href="/auth" className="rounded-md border border-border px-3 py-2 text-xs text-zinc-200">Auth</Link>
           <GameGuideModal variant="bottom-nav" />
         </div>
       </nav>
