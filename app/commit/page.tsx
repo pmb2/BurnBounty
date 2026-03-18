@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { deriveAddressFromWif } from '@/lib/wallet';
+import { isLikelyTestnetWif, maskWif } from '@/lib/wif';
 
 async function hash256Hex(input: string): Promise<string> {
   const bytes = new TextEncoder().encode(input);
@@ -25,11 +25,13 @@ export default function CommitPage() {
       return;
     }
     try {
-      const address = deriveAddressFromWif(normalized);
+      if (!isLikelyTestnetWif(normalized)) {
+        throw new Error('The provided key does not look like a valid WIF.');
+      }
       localStorage.setItem('burnbounty.wif', normalized);
-      setConnectedAddress(address);
+      setConnectedAddress(maskWif(normalized));
       setWifInput('');
-      toast.success('Wallet connected', { description: `Using ${address}` });
+      toast.success('Wallet connected', { description: `Using ${maskWif(normalized)}` });
     } catch {
       toast.error('Invalid WIF', { description: 'The provided key could not be parsed.' });
     }

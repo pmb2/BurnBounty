@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { deriveAddressFromWif } from '@/lib/wallet';
+import { useEffect, useState } from 'react';
+import { isLikelyTestnetWif, maskWif } from '@/lib/wif';
 import { Button } from './ui/button';
 
 export function WalletConnect() {
@@ -11,18 +11,14 @@ export function WalletConnect() {
   useEffect(() => {
     setSavedWif(localStorage.getItem('burnbounty.wif') || '');
   }, []);
-  const address = useMemo(() => {
-    if (!savedWif) return '';
-    try {
-      return deriveAddressFromWif(savedWif);
-    } catch {
-      return 'Invalid WIF';
-    }
-  }, [savedWif]);
-
   function save() {
-    localStorage.setItem('burnbounty.wif', wif.trim());
-    setSavedWif(wif.trim());
+    const normalized = wif.trim();
+    if (!isLikelyTestnetWif(normalized)) {
+      setSavedWif('');
+      return;
+    }
+    localStorage.setItem('burnbounty.wif', normalized);
+    setSavedWif(normalized);
     setWif('');
   }
 
@@ -35,7 +31,7 @@ export function WalletConnect() {
         placeholder="Chipnet WIF (demo only)"
       />
       <Button size="sm" onClick={save}>Connect</Button>
-      <span className="hidden max-w-52 truncate text-xs text-amber-300 md:block">{address || 'Demo key only - never use mainnet funds'}</span>
+      <span className="hidden max-w-52 truncate text-xs text-amber-300 md:block">{savedWif ? `Connected: ${maskWif(savedWif)}` : 'Demo key only - never use mainnet funds'}</span>
     </div>
   );
 }
