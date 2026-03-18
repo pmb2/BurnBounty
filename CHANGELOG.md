@@ -18,8 +18,20 @@ Format inspired by Keep a Changelog and semantic versioning.
 - UI/UX flow-audit report:
   - `docs/ui-ux-flow-audit.md`
   - onboarding friction map + next-pass priorities
+- immersive 3D world scaffolding and pipeline tooling:
+  - `components/BountyWorldScene.tsx`
+  - `data/3d-assets.json`
+  - `scripts/validate-3d-assets.ts`
+  - `docs/3d-asset-pipeline.md`
+  - `public/3d/*` asset directories
 
 ### Changed
+- core user flow consolidated into hubs:
+  - `/play` (access + commit + reveal)
+  - `/armory` (inventory + market + ledger)
+- legacy route wrappers now redirect:
+  - `/commit`, `/reveal`, `/collection`, `/trading`, `/dashboard`
+- immersive surfaces upgraded with active telemetry board overlays and motion backdrops.
 - Home onboarding flow now prioritizes one dominant CTA (`Start Playing`) and defers advanced wallet methods.
 - Auth Hub now defaults to embedded onboarding and gates external/Snap under explicit advanced options.
 - Header wallet state now shows persistent auth status with wallet-type context; gameplay WIF input is collapsed.

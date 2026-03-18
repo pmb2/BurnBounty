@@ -167,7 +167,8 @@ npm run dev
 
 3. Open `http://localhost:3000` and run flow:
 
-- `Commit` -> `Reveal` -> `Burn`.
+- `/play` -> Access -> Commit -> Reveal
+- `/armory?tab=inventory` -> Burn / list / track stats
 
 4. Scripted flow:
 
@@ -186,9 +187,31 @@ TEST_USER_WIF=<chipnet_wif> npm run test:demo-flow
 
 ## Roadmap
 
-- **POC (current)**: Commit-reveal + redemption flow on chipnet.
+- **POC (current)**: Unified Play + Armory flow with immersive 3D scene scaffolding.
 - **Next**: Mainnet-hardening, production wallet UX, final art pipeline.
 - **Later**: Secondary market hooks, royalty feedback, governance options.
+
+---
+
+## 3D Immersive Pipeline
+
+BurnBounty now includes a staged 3D worlding path:
+
+- Runtime world scaffold: `components/BountyWorldScene.tsx`
+- Asset manifest: `data/3d-assets.json`
+- Validation command:
+
+```bash
+npm run assets:3d:validate
+```
+
+- Asset directories:
+  - `public/3d/scenes`
+  - `public/3d/props`
+  - `public/3d/cards`
+
+Detailed pipeline doc:
+- [`docs/3d-asset-pipeline.md`](./docs/3d-asset-pipeline.md)
 
 ---
 

@@ -1,0 +1,43 @@
+{
+  "version": "0.1.0",
+  "updatedAt": "2026-03-18T00:00:00.000Z",
+  "notes": "Drop generated GLB assets into public/3d and mark status=ready once validated.",
+  "assets": [
+    {
+      "id": "board-main",
+      "name": "BurnBounty Board",
+      "slot": "scene.board",
+      "source": "trellis",
+      "status": "placeholder",
+      "file": "public/3d/scenes/board-main.glb",
+      "thumbnail": "public/bg/burnbounty-board.png",
+      "maxSizeMb": 8,
+      "maxTriangles": 120000,
+      "license": "project-owned"
+    },
+    {
+      "id": "desk-props-set",
+      "name": "Desk Props Set",
+      "slot": "scene.props",
+      "source": "trellis",
+      "status": "placeholder",
+      "file": "public/3d/props/desk-props-set.glb",
+      "thumbnail": "public/bg/burnbounty-board-alt.png",
+      "maxSizeMb": 6,
+      "maxTriangles": 90000,
+      "license": "project-owned"
+    },
+    {
+      "id": "card-pack-crate",
+      "name": "Card Pack Crate",
+      "slot": "scene.interactive",
+      "source": "hunyuan",
+      "status": "placeholder",
+      "file": "public/3d/props/card-pack-crate.glb",
+      "thumbnail": "public/bg/burnbounty-board.png",
+      "maxSizeMb": 5,
+      "maxTriangles": 80000,
+      "license": "project-owned"
+    }
+  ]
+}

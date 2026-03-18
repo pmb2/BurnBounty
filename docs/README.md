@@ -42,6 +42,7 @@ Auth subsystem status:
 - [Auth Operations](./auth-operations.md)
 - [Auth Production Signoff](./auth-production-signoff.md)
 - [UI/UX Flow Audit](./ui-ux-flow-audit.md)
+- [3D Asset Pipeline](./3d-asset-pipeline.md)
 - [Contract Specifications](./contracts/specifications.md)
 - [RNG Design & Security](./rng.md)
 - [API Specifications](./api.md)

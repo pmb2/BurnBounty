@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { ActiveBoardBackdrop } from '@/components/ActiveBoardBackdrop';
+import { BountyWorldScene } from '@/components/BountyWorldScene';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/ui/button';
 import type { CardAsset } from '@/types/cards';
@@ -188,6 +189,10 @@ export default function ArmoryPage() {
             <Button variant={tab === 'ledger' ? 'default' : 'outline'} onClick={() => setTab('ledger')}>Ledger</Button>
           </div>
         </div>
+      </section>
+
+      <section className="mb-6">
+        <BountyWorldScene />
       </section>
 
       {tab === 'inventory' && (

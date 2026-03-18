@@ -8,6 +8,7 @@ import { gsap } from 'gsap';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
 import { ActiveBoardBackdrop } from '@/components/ActiveBoardBackdrop';
+import { BountyWorldScene } from '@/components/BountyWorldScene';
 import { Card } from '@/components/Card';
 import { MagicParticles } from '@/components/MagicParticles';
 import { PackReveal3D } from '@/components/PackReveal3D';
@@ -226,6 +227,10 @@ export default function PlayPage() {
             })}
           </div>
         </div>
+      </section>
+
+      <section className="mb-6">
+        <BountyWorldScene />
       </section>
 
       {step === 'access' && (

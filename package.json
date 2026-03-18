@@ -19,6 +19,7 @@
     "db:migrate:test": "cross-env AUTH_TEST_USE_INMEM_DB=true tsx scripts/db-migrate.ts",
     "test:flow": "tsx scripts/test-flow.ts",
     "test:demo-flow": "tsx scripts/demo-showcase-flow.ts",
+    "assets:3d:validate": "tsx scripts/validate-3d-assets.ts",
     "test:auth": "cross-env AUTH_TEST_USE_INMEM_DB=true node --import tsx --test --test-concurrency=1 tests/auth/*.test.ts",
     "release:auth-gate": "npm run db:migrate:test && npm run test:auth && npm run typecheck && npm run build",
     "gen:cards": "tsx scripts/generate-card-assets.ts",
