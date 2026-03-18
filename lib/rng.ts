@@ -1,6 +1,6 @@
 // @ts-nocheck
 import crypto from 'node:crypto';
-import type { Tier } from '@/types/cards';
+import type { PackSeries, Tier } from '@/types/cards';
 
 export const ODDS = {
   Bronze: 70,
@@ -14,6 +14,29 @@ export const FACE_VALUE_RANGES: Record<Tier, [number, number]> = {
   Silver: [100_000_000, 2_000_000_000],
   Gold: [5_000_000_000, 20_000_000_000],
   Diamond: [50_000_000_000, 500_000_000_000]
+};
+
+export const WEEKLY_DRIFT_RANGES_MILLI: Record<Tier, [number, number]> = {
+  Bronze: [-3, 1],
+  Silver: [-2, 4],
+  Gold: [-1, 6],
+  Diamond: [1, 8]
+};
+
+export const RANDOM_CAP_WEEK_RANGES: Record<Tier, [number, number]> = {
+  Bronze: [0, 52],
+  Silver: [26, 104],
+  Gold: [78, 182],
+  Diamond: [130, 260]
+};
+
+export const FLOOR_MULTIPLIER_MILLI = 400;
+export const BLOCKS_PER_WEEK = 1008;
+
+export const SERIES_CONFIG: Record<PackSeries, { priceSats: number; minDriftMilli: number; label: string }> = {
+  GENESIS_BETA: { priceSats: 5_000_000, minDriftMilli: 5, label: 'Genesis Beta (Series 1)' },
+  FOUNDER_EDITION: { priceSats: 2_000_000, minDriftMilli: 1, label: 'Founder Edition (Series 2)' },
+  NORMAL: { priceSats: 800_000, minDriftMilli: -3, label: 'Normal' }
 };
 
 function sha256(data: Buffer | string): Buffer {
@@ -108,11 +131,18 @@ function tierFromRoll(roll: number): Tier {
 export type GeneratedCard = {
   tier: Tier;
   faceValueSats: number;
+  weeklyDriftMilli: number;
+  randomCapWeeks: number;
 };
 
-export function generateCardsFromEntropy(entropyRootHex: string, cardCount = 5): GeneratedCard[] {
+export function generateCardsFromEntropy(
+  entropyRootHex: string,
+  cardCount = 5,
+  series: PackSeries = 'NORMAL'
+): GeneratedCard[] {
   const mixedHex = mix32Rounds(entropyRootHex);
   const source = createEntropySource(mixedHex);
+  const seriesMinDrift = SERIES_CONFIG[series].minDriftMilli;
 
   const cards: GeneratedCard[] = [];
   for (let i = 0; i < cardCount; i++) {
@@ -121,12 +151,18 @@ export function generateCardsFromEntropy(entropyRootHex: string, cardCount = 5):
     const [min, max] = FACE_VALUE_RANGES[tier];
     const span = max - min + 1;
     const faceValueSats = min + drawUniform(source, span);
-    cards.push({ tier, faceValueSats });
+    const [driftMin, driftMax] = WEEKLY_DRIFT_RANGES_MILLI[tier];
+    const driftSpan = driftMax - driftMin + 1;
+    const weeklyDriftMilli = Math.max(seriesMinDrift, driftMin + drawUniform(source, driftSpan));
+    const [capMin, capMax] = RANDOM_CAP_WEEK_RANGES[tier];
+    const capSpan = capMax - capMin + 1;
+    const randomCapWeeks = capMin + drawUniform(source, capSpan);
+    cards.push({ tier, faceValueSats, weeklyDriftMilli, randomCapWeeks });
   }
 
   return cards;
 }
 
-export function generateBatchCards(entropyRoots: string[], cardCount = 5): GeneratedCard[][] {
-  return entropyRoots.map((root) => generateCardsFromEntropy(root, cardCount));
+export function generateBatchCards(entropyRoots: string[], cardCount = 5, series: PackSeries = 'NORMAL'): GeneratedCard[][] {
+  return entropyRoots.map((root) => generateCardsFromEntropy(root, cardCount, series));
 }

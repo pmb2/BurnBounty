@@ -1,13 +1,33 @@
 pragma cashscript ^0.12.1;
 
-// PrizePool holds reserve BCH and only allows:
-// 1) forwarding funds into CardRedeemer covenant path
-// 2) admin emergency withdraw/reseed (POC governance control)
+// PrizePool supports pro-rata safety if requested payout exceeds available reserve.
 contract PrizePool(pubkey adminPkh, bytes cardRedeemerLockingBytecode) {
   function forwardToRedeemer(int amount) {
     require(tx.outputs[0].lockingBytecode == cardRedeemerLockingBytecode);
     require(tx.outputs[0].value == amount);
     require(tx.outputs[0].tokenCategory == 0x);
+  }
+
+  // If available reserve is below requested total, split available amount pro-rata.
+  function payoutProRata(pubkey redeemerPkh, int requestedPayout, int requestedHouseCut) {
+    int available = tx.inputs[this.activeInputIndex].value;
+    int requestedTotal = requestedPayout + requestedHouseCut;
+    require(requestedTotal > 0);
+
+    int payout = requestedPayout;
+    int houseCut = requestedHouseCut;
+
+    if (available < requestedTotal) {
+      payout = (available * requestedPayout) / requestedTotal;
+      houseCut = available - payout;
+    }
+
+    require(tx.outputs[0].lockingBytecode == new LockingBytecodeP2PKH(redeemerPkh));
+    require(tx.outputs[0].value == payout);
+    require(tx.outputs[0].tokenCategory == 0x);
+
+    require(tx.outputs[1].value == houseCut);
+    require(tx.outputs[1].tokenCategory == 0x);
   }
 
   function adminWithdraw(pubkey adminPk, sig adminSig, int amount) {

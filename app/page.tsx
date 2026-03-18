@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { PackOpeningAnimation } from '@/components/PackOpeningAnimation';
 import { Button } from '@/components/ui/button';
+import { GameGuideModal } from '@/components/GameGuideModal';
 
 export default function HomePage() {
   return (
     <main className="mx-auto max-w-6xl px-6 py-14">
+      <GameGuideModal variant="floating-home" />
       <section className="grid items-center gap-12 md:grid-cols-2">
         <div className="space-y-6">
           <p className="inline-block rounded-full border border-border px-3 py-1 text-xs uppercase tracking-[0.22em] text-orange-300">

@@ -15,6 +15,9 @@ export function Card({ card }: { card: CardAsset }) {
         <h3 className="font-semibold">{card.name}</h3>
         <p className="text-xs uppercase tracking-[0.16em] text-zinc-400">{card.tier}</p>
         <p className="text-sm">Face: {(card.faceValueSats / 1e8).toFixed(8)} BCH</p>
+        <p className="text-[11px] text-zinc-400">
+          {card.weeklyDriftMilli >= 0 ? 'Grows' : 'Decays'} {(Math.abs(card.weeklyDriftMilli) / 10).toFixed(1)}% per week • Caps in {(card.randomCapWeeks / 52).toFixed(1)} years
+        </p>
         <p className="text-[11px] uppercase tracking-[0.12em] text-zinc-500">Reward: 80% on burn</p>
         <p className="text-xs text-zinc-500">Serial: {card.serial}</p>
       </div>

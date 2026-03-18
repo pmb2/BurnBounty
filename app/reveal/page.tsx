@@ -93,6 +93,7 @@ export default function RevealPage() {
         <div className="mt-4 rounded-2xl border border-border bg-card p-5">
           <p className="text-sm text-zinc-300">Commit txid: {stash.pending.commitTxid}</p>
           <p className="text-sm text-zinc-300">Commitment hash: {stash.pending.commitmentHash}</p>
+          <p className="text-sm text-zinc-300">Series: {stash.pending.series} • Pack price: {(stash.pending.packPriceSats / 1e8).toFixed(8)} BCH</p>
           <Button className="mt-4" onClick={revealPack} disabled={loading}>{loading ? 'Revealing...' : 'Reveal & Hunt'}</Button>
         </div>
       )}

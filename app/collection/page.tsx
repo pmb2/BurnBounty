@@ -54,7 +54,7 @@ export default function CollectionPage() {
       const housePrior = Number(localStorage.getItem('burnbounty.houseProfit') || '0');
       localStorage.setItem('burnbounty.houseProfit', String(housePrior + json.houseCut));
       toast.success('Card redeemed', {
-        description: `Payout ${(json.payout / 1e8).toFixed(8)} BCH, house ${(json.houseCut / 1e8).toFixed(8)} BCH`
+        description: `Payout ${(json.payout / 1e8).toFixed(8)} BCH, house ${(json.houseCut / 1e8).toFixed(8)} BCH • multiplier ${(Number(json.multiplierMilli || 1000) / 1000).toFixed(3)}x`
       });
     } catch (err: any) {
       toast.error('Redeem failed', { description: err.message || 'Unknown redeem error' });

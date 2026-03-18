@@ -46,6 +46,61 @@ Inspired by physical TCGs + viral digital card culture, built natively on BCH fo
 
 ---
 
+## Sustainable Decay & Economy (v0.6)
+
+BurnBounty now uses a sustainable long-horizon value system with controlled growth, controlled decay, and a hard floor.
+
+### Weekly Drift Ranges (x1000 precision)
+
+| Tier | Weekly Drift |
+|---|---|
+| Bronze | -3 to +1 |
+| Silver | -2 to +4 |
+| Gold | -1 to +6 |
+| Diamond | +1 to +8 |
+
+### Random Growth/Decay Cap Windows
+
+| Tier | Cap Weeks | Approx Years |
+|---|---|---|
+| Bronze | 0-52 | 0-1 year |
+| Silver | 26-104 | 0.5-2 years |
+| Gold | 78-182 | 1.5-3.5 years |
+| Diamond | 130-260 | 2.5-5 years |
+
+### Floor Rule
+
+- Minimum multiplier floor: **0.40**
+- Cards never decay below **40%** of original face value.
+
+### Redemption Formula
+
+```text
+weeks = (currentBlockHeight - mintBlockHeight) / 1008
+effectiveWeeks = min(weeks, randomCapWeeks)
+multiplier = max(0.40, 1 + (weeklyDrift / 1000) * effectiveWeeks)
+payout = faceValue * 0.80 * multiplier
+```
+
+### Series Pricing
+
+| Series | Pack Price | Drift Perk |
+|---|---|---|
+| Genesis Beta (Series 1) | 0.05 BCH | min drift +5 |
+| Founder Edition (Series 2) | 0.02 BCH | min drift +1 |
+| Normal | 0.008 BCH | standard drift rules |
+
+### Pool Safety
+
+- `PrizePool.cash` includes pro-rata payout logic when available reserve is below requested total.
+
+### In-Game Guide
+
+- New **Bounty Hunter Handbook** modal explains decay, cap windows, floor, series perks, and quick math.
+- Placeholder screenshot: `docs/assets/game-guide-modal-placeholder.png`
+
+---
+
 ## The RNG - Fully Auditable
 
 Randomness uses commit-reveal + chain-linked entropy, implemented with deterministic replayability.

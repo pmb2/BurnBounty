@@ -4,12 +4,11 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { CARD_TEMPLATES } from '@/data/cards';
 import { encodeCommitment, satsToBch } from '@/lib/cards';
-import { commitmentFromSeed, ODDS } from '@/lib/rng';
+import { BLOCKS_PER_WEEK, commitmentFromSeed, FLOOR_MULTIPLIER_MILLI, ODDS, SERIES_CONFIG } from '@/lib/rng';
 import { verifyBatchCardGeneration, verifyCardGeneration } from '@/lib/verify';
-import type { CardAsset, CommitPackResult, PendingPack, RevealPackResult } from '@/types/cards';
+import type { CardAsset, CommitPackResult, PackSeries, PendingPack, RevealPackResult } from '@/types/cards';
 
-const PACK_PRICE_SATS = Number(process.env.PACK_PRICE_SATS || 100_000);
-const PACK_HOUSE_CUT_SATS = Math.floor(PACK_PRICE_SATS * 0.2);
+const PACK_PRICE_SATS = Number(process.env.PACK_PRICE_SATS || SERIES_CONFIG.NORMAL.priceSats);
 const HOUSE_PKH = process.env.HOUSE_PKH || '';
 const PRIZE_POOL_PKH = process.env.PRIZE_POOL_PKH || HOUSE_PKH;
 const TOKEN_CATEGORY = process.env.TOKEN_CATEGORY || '00'.repeat(32);
@@ -38,22 +37,44 @@ function mockBlockHash(offset = 0): string {
   return crypto.createHash('sha256').update(`${root}:${offset}`).digest('hex');
 }
 
-function asCardAssets(cards: Array<{ tier: string; faceValueSats: number }>): CardAsset[] {
+function packPriceForSeries(series: PackSeries) {
+  if (series === 'NORMAL') return PACK_PRICE_SATS;
+  return SERIES_CONFIG[series].priceSats;
+}
+
+function houseCutForSeries(series: PackSeries) {
+  return Math.floor(packPriceForSeries(series) * 0.2);
+}
+
+function currentMultiplierMilli(card: Pick<CardAsset, 'weeklyDriftMilli' | 'randomCapWeeks' | 'mintBlockHeight'>, currentBlockHeight: number): number {
+  const weeks = Math.max(0, Math.floor((currentBlockHeight - card.mintBlockHeight) / BLOCKS_PER_WEEK));
+  const effectiveWeeks = Math.min(weeks, card.randomCapWeeks);
+  const raw = 1000 + (card.weeklyDriftMilli * effectiveWeeks);
+  return Math.max(FLOOR_MULTIPLIER_MILLI, raw);
+}
+
+function asCardAssets(cards: Array<{ tier: string; faceValueSats: number; weeklyDriftMilli: number; randomCapWeeks: number }>, series: PackSeries, mintBlockHeight: number): CardAsset[] {
   return cards.map((entry, i) => {
     const templatePool = CARD_TEMPLATES.filter((c) => c.tier === entry.tier);
     const template = templatePool[i % templatePool.length];
     const tierByte = entry.tier === 'Bronze' ? 1 : entry.tier === 'Silver' ? 2 : entry.tier === 'Gold' ? 3 : 4;
-    const commitmentHex = encodeCommitment(tierByte, entry.faceValueSats);
+    const commitmentHex = encodeCommitment(tierByte, entry.faceValueSats, entry.weeklyDriftMilli, entry.randomCapWeeks, mintBlockHeight);
     const nftId = crypto.createHash('sha256').update(`${TOKEN_CATEGORY}:${commitmentHex}:${i}`).digest('hex');
+    const initialPayout = Math.floor(entry.faceValueSats * 0.8);
     return {
       nftId,
       categoryId: TOKEN_CATEGORY,
       commitmentHex,
       name: template.name,
       tier: entry.tier,
+      series,
       faceValueSats: entry.faceValueSats,
-      payoutSats: Math.floor(entry.faceValueSats * 0.8),
-      payoutBch: satsToBch(Math.floor(entry.faceValueSats * 0.8)),
+      originalFaceValueSats: entry.faceValueSats,
+      payoutSats: initialPayout,
+      payoutBch: satsToBch(initialPayout),
+      weeklyDriftMilli: entry.weeklyDriftMilli,
+      randomCapWeeks: entry.randomCapWeeks,
+      mintBlockHeight,
       serial: nftId.slice(0, 12).toUpperCase(),
       image: template.image,
       bcmrUri: `ipfs://bafkrei-burnbounty-poc/cards/${template.id}.json`
@@ -62,9 +83,9 @@ function asCardAssets(cards: Array<{ tier: string; faceValueSats: number }>): Ca
 }
 
 function applyDemoShowcaseRig(
-  cards: Array<{ tier: string; faceValueSats: number }>,
+  cards: Array<{ tier: string; faceValueSats: number; weeklyDriftMilli: number; randomCapWeeks: number }>,
   entropyRoot: string
-): Array<{ tier: string; faceValueSats: number }> {
+): Array<{ tier: string; faceValueSats: number; weeklyDriftMilli: number; randomCapWeeks: number }> {
   if (!DEMO_SHOWCASE_MODE) return cards;
 
   // Deterministic showcase index for repeatable demo recordings.
@@ -72,7 +93,9 @@ function applyDemoShowcaseRig(
   const next = [...cards];
   next[idx] = {
     tier: DEMO_SHOWCASE_FORCE_TIER,
-    faceValueSats: DEMO_SHOWCASE_FACE_SATS
+    faceValueSats: DEMO_SHOWCASE_FACE_SATS,
+    weeklyDriftMilli: 8,
+    randomCapWeeks: 260
   };
   return next;
 }
@@ -92,7 +115,8 @@ export function verifyPackLocally(input: {
   return verifyCardGeneration(input);
 }
 
-export async function commitPackOnChipnet(input: { userWif: string; commitmentHash: string }): Promise<CommitPackResult> {
+export async function commitPackOnChipnet(input: { userWif: string; commitmentHash: string; series?: PackSeries }): Promise<CommitPackResult> {
+  const series = input.series || 'NORMAL';
   const commitHeight = MOCK_CHAIN_HEIGHT;
   const commitTxid = crypto.createHash('sha256').update(`${input.commitmentHash}:${Date.now()}`).digest('hex');
   const userAddr = `demo-user-${crypto.createHash('sha256').update(input.userWif).digest('hex').slice(0, 24)}`;
@@ -102,6 +126,8 @@ export async function commitPackOnChipnet(input: { userWif: string; commitmentHa
     commitHeight,
     commitmentHash: input.commitmentHash,
     userAddress: userAddr,
+    series,
+    packPriceSats: packPriceForSeries(series),
     blockHashN: mockBlockHash(0),
     blockHashN1: mockBlockHash(1),
     blockHashN2: mockBlockHash(2),
@@ -115,9 +141,9 @@ export async function commitPackOnChipnet(input: { userWif: string; commitmentHa
       const revealArtifact = loadArtifact('PackReveal');
       const commitArtifact = loadArtifact('PackCommit');
       const provider = new ElectrumNetworkProvider('chipnet', CHIPNET_ELECTRUM);
-      const revealContract = new Contract(revealArtifact, [REVEAL_WINDOW_BLOCKS, PRIZE_POOL_PKH, TOKEN_CATEGORY, PACK_HOUSE_CUT_SATS], { provider });
-      const commitContract = new Contract(commitArtifact, [PACK_PRICE_SATS, revealContract.bytecode], { provider });
-      await commitContract.unlock.commit(input.commitmentHash, commitHeight).to(revealContract.address, PACK_PRICE_SATS).send();
+      const revealContract = new Contract(revealArtifact, [REVEAL_WINDOW_BLOCKS, PRIZE_POOL_PKH, TOKEN_CATEGORY, houseCutForSeries(series)], { provider });
+      const commitContract = new Contract(commitArtifact, [SERIES_CONFIG.GENESIS_BETA.priceSats, SERIES_CONFIG.FOUNDER_EDITION.priceSats, PACK_PRICE_SATS, revealContract.bytecode], { provider });
+      await commitContract.unlock.commit(input.commitmentHash, commitHeight, series === 'GENESIS_BETA' ? 1 : series === 'FOUNDER_EDITION' ? 2 : 3).to(revealContract.address, packPriceForSeries(series)).send();
     } catch {
       // Offline/demo fallback.
     }
@@ -145,10 +171,11 @@ export async function revealPackOnChipnet(input: {
     blockHashN: input.pending.blockHashN,
     blockHashN1: input.pending.blockHashN1,
     blockHashN2: input.pending.blockHashN2,
-    commitTxid: input.pending.commitTxid
+    commitTxid: input.pending.commitTxid,
+    series: input.pending.series
   });
 
-  const mintedCards = asCardAssets(applyDemoShowcaseRig(cards, entropyRoot));
+  const mintedCards = asCardAssets(applyDemoShowcaseRig(cards, entropyRoot), input.pending.series, input.pending.commitHeight);
 
   let revealTxid = `mock-reveal-${Date.now()}`;
   if (ENABLE_CHAIN_CALLS) {
@@ -160,7 +187,7 @@ export async function revealPackOnChipnet(input: {
       const userAddr = userKey.toAddress(bitcore.Networks.testnet).toString();
       const revealArtifact = loadArtifact('PackReveal');
       const provider = new ElectrumNetworkProvider('chipnet', CHIPNET_ELECTRUM);
-      const contract = new Contract(revealArtifact, [REVEAL_WINDOW_BLOCKS, PRIZE_POOL_PKH, TOKEN_CATEGORY, PACK_HOUSE_CUT_SATS], { provider });
+      const contract = new Contract(revealArtifact, [REVEAL_WINDOW_BLOCKS, PRIZE_POOL_PKH, TOKEN_CATEGORY, houseCutForSeries(input.pending.series)], { provider });
       const signer = new SignatureTemplate(input.userWif);
       const commitments = mintedCards.map((c) => c.commitmentHex);
       const revealBytes = Buffer.from(`${input.userSeed}:${input.nonce}`, 'utf8').toString('hex');
@@ -212,8 +239,10 @@ export function revealBatchLocally(inputs: Array<{
 export async function redeemCardOnChipnet(userWif: string, card: CardAsset) {
   if (ENABLE_CHAIN_CALLS && !PRIZE_POOL_PKH) throw new Error('Missing PRIZE_POOL_PKH');
 
-  const payout = Math.floor(card.faceValueSats * 0.8);
-  const houseCut = card.faceValueSats - payout;
+  const multiplierMilli = currentMultiplierMilli(card, MOCK_CHAIN_HEIGHT);
+  const adjustedFaceValue = Math.floor((card.originalFaceValueSats * multiplierMilli) / 1000);
+  const payout = Math.floor(adjustedFaceValue * 0.8);
+  const houseCut = adjustedFaceValue - payout;
 
   let txid = `mock-redeem-${Date.now()}`;
   if (ENABLE_CHAIN_CALLS) {
@@ -228,13 +257,13 @@ export async function redeemCardOnChipnet(userWif: string, card: CardAsset) {
       const contract = new Contract(artifact, [PRIZE_POOL_PKH], { provider });
       const signer = new SignatureTemplate(userWif);
       const poolAddress = bitcore.Address.fromPublicKeyHash(Buffer.from(PRIZE_POOL_PKH, 'hex'), bitcore.Networks.testnet).toString();
-      const tx = await contract.unlock.redeem(userPk, signer, payout, houseCut).to(userAddr, payout).to(poolAddress, houseCut).send();
+      const tx = await contract.unlock.redeem(userPk, signer, payout, houseCut, card.weeklyDriftMilli, card.randomCapWeeks, card.mintBlockHeight).to(userAddr, payout).to(poolAddress, houseCut).send();
       txid = typeof tx === 'string' ? tx : tx.txid;
     } catch {
       // Offline fallback.
     }
   }
 
-  return { txid, payout, houseCut };
+  return { txid, payout, houseCut, multiplierMilli, adjustedFaceValue };
 }
 

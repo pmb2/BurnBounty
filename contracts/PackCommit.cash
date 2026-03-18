@@ -1,17 +1,31 @@
 pragma cashscript ^0.12.1;
 
-// PackCommit locks one pending pack purchase against a buyer commitment.
-// commitmentHash = hash256(userSeed || nonce)
-contract PackCommit(int packPriceSats, bytes packRevealLockingBytecode) {
-  function commit(bytes32 commitmentHash, int commitHeight) {
+// PackCommit enforces series pricing at commit time and forwards funds into PackReveal.
+// seriesId: 1=Genesis Beta, 2=Founder Edition, 3=Normal
+contract PackCommit(
+  int genesisPriceSats,
+  int founderPriceSats,
+  int normalPriceSats,
+  bytes packRevealLockingBytecode
+) {
+  function commit(bytes32 commitmentHash, int commitHeight, int seriesId) {
     require(commitmentHash != 0x0000000000000000000000000000000000000000000000000000000000000000);
+    require(seriesId >= 1);
+    require(seriesId <= 3);
 
-    // Enforce minimum pack payment and forward funds into PackReveal covenant UTXO.
+    int requiredPrice = normalPriceSats;
+    if (seriesId == 1) {
+      requiredPrice = genesisPriceSats;
+    }
+    if (seriesId == 2) {
+      requiredPrice = founderPriceSats;
+    }
+
     require(tx.outputs[0].lockingBytecode == packRevealLockingBytecode);
-    require(tx.outputs[0].value >= packPriceSats);
+    require(tx.outputs[0].value >= requiredPrice);
     require(tx.outputs[0].tokenCategory == 0x);
 
-    // commitHeight is provided so reveal path can enforce a bounded window.
+    // Stored off-chain in pending-pack metadata for reveal/redeem math.
     require(commitHeight >= 0);
   }
 }

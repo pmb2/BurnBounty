@@ -8,6 +8,8 @@ const pendingSchema = z.object({
   commitHeight: z.number().int(),
   commitmentHash: z.string().length(64),
   userAddress: z.string(),
+  series: z.enum(['GENESIS_BETA', 'FOUNDER_EDITION', 'NORMAL']),
+  packPriceSats: z.number().int().positive(),
   blockHashN: z.string().length(64),
   blockHashN1: z.string().length(64),
   blockHashN2: z.string().length(64)

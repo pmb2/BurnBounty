@@ -27,6 +27,7 @@ Out of scope (for this POC):
 ## Core Docs
 
 - [Architecture](./architecture.md)
+- [PRD](./PRD.md)
 - [Contract Specifications](./contracts/specifications.md)
 - [RNG Design & Security](./rng.md)
 - [API Specifications](./api.md)

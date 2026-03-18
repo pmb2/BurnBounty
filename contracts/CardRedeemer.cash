@@ -1,18 +1,58 @@
 pragma cashscript ^0.12.1;
 
-// CardRedeemer enforces burn redemption.
-// Input NFT commitment format (9 bytes):
-// [0] tier byte, [1..8] face value sats uint64 big-endian.
+// CardRedeemer applies sustainable decay/growth payout math.
+// Commitment format (17 bytes):
+// [0]=tier, [1..8]=faceValue, [9..10]=weeklyDriftMilli, [11..12]=randomCapWeeks, [13..16]=mintBlockHeight
 contract CardRedeemer(pubkey prizePoolPkh) {
-  function redeem(pubkey redeemerPk, sig redeemerSig, int payout, int houseCut) {
+  function redeem(
+    pubkey redeemerPk,
+    sig redeemerSig,
+    int payout,
+    int houseCut,
+    int weeklyDriftHint,
+    int randomCapWeeksHint,
+    int mintBlockHeightHint
+  ) {
     require(checkSig(redeemerSig, redeemerPk));
 
     bytes commitment = tx.inputs[this.activeInputIndex].nftCommitment;
-    require(commitment.length == 9);
+    require(commitment.length == 17);
 
-    int faceValue = int(commitment.split(1)[1]);
-    int expectedPayout = (faceValue * 80) / 100;
-    int expectedHouse = faceValue - expectedPayout;
+    int faceValue = int(commitment.split(1)[1].split(8)[0]);
+    int weeklyDrift = int(commitment.split(9)[1].split(2)[0]);
+    int randomCapWeeks = int(commitment.split(11)[1].split(2)[0]);
+    int mintBlockHeight = int(commitment.split(13)[1].split(4)[0]);
+
+    // Defensive equality checks against provided hints.
+    require(weeklyDrift == weeklyDriftHint);
+    require(randomCapWeeks == randomCapWeeksHint);
+    require(mintBlockHeight == mintBlockHeightHint);
+
+    // weeks = (currentBlockHeight - mintBlockHeight) / 1008
+    int elapsedBlocks = tx.time - mintBlockHeight;
+    if (elapsedBlocks < 0) {
+      elapsedBlocks = 0;
+    }
+    int weeks = elapsedBlocks / 1008;
+
+    // effectiveWeeks = min(weeks, randomCapWeeks)
+    int effectiveWeeks = weeks;
+    if (effectiveWeeks > randomCapWeeks) {
+      effectiveWeeks = randomCapWeeks;
+    }
+
+    // multiplier = max(0.40, 1 + drift * weeks)
+    // fixed-point milli precision:
+    // multiplierMilli = max(400, 1000 + weeklyDrift*effectiveWeeks)
+    int multiplierMilli = 1000 + (weeklyDrift * effectiveWeeks);
+    if (multiplierMilli < 400) {
+      multiplierMilli = 400;
+    }
+
+    // payout = faceValue * 0.80 * multiplier
+    int adjustedFace = (faceValue * multiplierMilli) / 1000;
+    int expectedPayout = (adjustedFace * 80) / 100;
+    int expectedHouse = adjustedFace - expectedPayout;
 
     require(payout == expectedPayout);
     require(houseCut == expectedHouse);
@@ -22,7 +62,7 @@ contract CardRedeemer(pubkey prizePoolPkh) {
     require(tx.outputs[0].value == payout);
     require(tx.outputs[0].tokenCategory == 0x);
 
-    // Output 1 = house cut to prize pool address (BCH only).
+    // Output 1 = house cut to prize pool.
     require(tx.outputs[1].lockingBytecode == new LockingBytecodeP2PKH(prizePoolPkh));
     require(tx.outputs[1].value == houseCut);
     require(tx.outputs[1].tokenCategory == 0x);

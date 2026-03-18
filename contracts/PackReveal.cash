@@ -1,14 +1,12 @@
 pragma cashscript ^0.12.1;
 
-// PackReveal verifies a commitment reveal and enforces deterministic RNG inputs.
-// Security model (March 2026 chipnet-compatible):
-// - commitment verified on-chain
-// - 6-block reveal window enforced
-// - entropy root includes multi-block hashes + tx hashPrevouts + user seed bytes
-// - 5 generated commitments are checked against outputs
-//
-// Note: direct VM-side loop/bitwise PRNG rounds become cleaner post-May-2026 upgrades.
-// This contract validates the deterministic RNG root while generation parity is mirrored in /lib/verify.ts.
+// PackReveal validates reveal inputs and commitment payload shape.
+// Commitment format (17 bytes):
+// [0]=tier (1..4)
+// [1..8]=faceValueSats uint64
+// [9..10]=weeklyDriftMilli int16 (scaled x1000)
+// [11..12]=randomCapWeeks uint16
+// [13..16]=mintBlockHeight uint32
 contract PackReveal(
   int revealWindowBlocks,
   pubkey prizePoolPkh,
@@ -22,6 +20,7 @@ contract PackReveal(
     bytes32 prevBlockHash1,
     bytes32 prevBlockHash2,
     bytes32 rngRoot,
+    int seriesId,
     bytes c1,
     bytes c2,
     bytes c3,
@@ -29,24 +28,74 @@ contract PackReveal(
     bytes c5,
     pubkey buyerPk
   ) {
-    // Verify commitment.
-    require(hash256(userSeed) == commitmentHash);
+    require(seriesId >= 1);
+    require(seriesId <= 3);
 
-    // Enforce reveal window.
+    // Commit -> reveal proof.
+    require(hash256(userSeed) == commitmentHash);
     require(tx.time <= commitHeight + revealWindowBlocks);
 
-    // Derive expected RNG root using multi-source entropy.
+    // Deterministic entropy anchor (multi-block + txid-derived data).
     bytes32 expectedRoot = hash256(userSeed + prevBlockHash1 + prevBlockHash2 + tx.hashPrevouts);
     require(expectedRoot == rngRoot);
 
+    // Validate each generated commitment range.
+    require(c1.length == 17);
+    require(c2.length == 17);
+    require(c3.length == 17);
+    require(c4.length == 17);
+    require(c5.length == 17);
+
+    int drift1 = int(c1.split(9)[1].split(2)[0]);
+    int drift2 = int(c2.split(9)[1].split(2)[0]);
+    int drift3 = int(c3.split(9)[1].split(2)[0]);
+    int drift4 = int(c4.split(9)[1].split(2)[0]);
+    int drift5 = int(c5.split(9)[1].split(2)[0]);
+
+    int cap1 = int(c1.split(11)[1].split(2)[0]);
+    int cap2 = int(c2.split(11)[1].split(2)[0]);
+    int cap3 = int(c3.split(11)[1].split(2)[0]);
+    int cap4 = int(c4.split(11)[1].split(2)[0]);
+    int cap5 = int(c5.split(11)[1].split(2)[0]);
+
+    // Hard drift bounds (all tiers combined envelope).
+    require(drift1 >= -3 && drift1 <= 8);
+    require(drift2 >= -3 && drift2 <= 8);
+    require(drift3 >= -3 && drift3 <= 8);
+    require(drift4 >= -3 && drift4 <= 8);
+    require(drift5 >= -3 && drift5 <= 8);
+
+    // Per-card cap bounds (global envelope 0..260 weeks).
+    require(cap1 >= 0 && cap1 <= 260);
+    require(cap2 >= 0 && cap2 <= 260);
+    require(cap3 >= 0 && cap3 <= 260);
+    require(cap4 >= 0 && cap4 <= 260);
+    require(cap5 >= 0 && cap5 <= 260);
+
+    // Premium series minimum drift floors.
+    if (seriesId == 1) {
+      require(drift1 >= 5);
+      require(drift2 >= 5);
+      require(drift3 >= 5);
+      require(drift4 >= 5);
+      require(drift5 >= 5);
+    }
+    if (seriesId == 2) {
+      require(drift1 >= 1);
+      require(drift2 >= 1);
+      require(drift3 >= 1);
+      require(drift4 >= 1);
+      require(drift5 >= 1);
+    }
+
     LockingBytecode buyerLock = new LockingBytecodeP2PKH(hash160(buyerPk));
 
-    // Output 0 carries 20% house cut.
+    // Output 0 = house cut to pool.
     require(tx.outputs[0].lockingBytecode == new LockingBytecodeP2PKH(prizePoolPkh));
     require(tx.outputs[0].value == houseCutSats);
     require(tx.outputs[0].tokenCategory == 0x);
 
-    // Outputs 1..5 mint the revealed cards.
+    // Outputs 1..5 = card mints.
     require(tx.outputs[1].lockingBytecode == buyerLock);
     require(tx.outputs[1].tokenCategory == categoryId);
     require(tx.outputs[1].nftCommitment == c1);
@@ -66,17 +115,5 @@ contract PackReveal(
     require(tx.outputs[5].lockingBytecode == buyerLock);
     require(tx.outputs[5].tokenCategory == categoryId);
     require(tx.outputs[5].nftCommitment == c5);
-
-    // Uniqueness guard.
-    require(c1 != c2);
-    require(c1 != c3);
-    require(c1 != c4);
-    require(c1 != c5);
-    require(c2 != c3);
-    require(c2 != c4);
-    require(c2 != c5);
-    require(c3 != c4);
-    require(c3 != c5);
-    require(c4 != c5);
   }
 }
