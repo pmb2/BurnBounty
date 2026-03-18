@@ -84,6 +84,16 @@ export function GameGuideModal({ variant = 'bottom-nav' }: { variant?: TriggerVa
                   <li>Even with deep decay, floor enforces multiplier &gt;= 0.40</li>
                 </ul>
               </section>
+
+              <section className="rounded-xl border border-border/70 bg-black/25 p-4">
+                <h3 className="mb-2 text-lg font-bold text-amber-200">7) Login, Profiles & Trading</h3>
+                <p>BurnBounty uses wallet signature auth (no passwords, no custody). Public profiles show hunter collections, and the trading post supports off-chain listings with on-chain settlement through escrow covenants.</p>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-zinc-300">
+                  <li>Paytaca: primary mobile UX</li>
+                  <li>Electron Cash: manual sign + verify fallback</li>
+                  <li>MetaMask BCH: secondary compatibility path</li>
+                </ul>
+              </section>
             </div>
           </div>
         </div>

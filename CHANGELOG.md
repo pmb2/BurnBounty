@@ -7,17 +7,31 @@ Format inspired by Keep a Changelog and semantic versioning.
 ## [Unreleased]
 
 ### Added
-- demo showcase mode with deterministic forced high-tier pull for recording
-- `test:demo-flow` script for repeatable demo validation
-- sustainable decay economy model with per-card weekly drift and random cap windows
-- in-app Bounty Hunter Handbook modal (homepage floating trigger + bottom nav handbook entry)
-- series-aware pack pricing (Genesis Beta, Founder Edition, Normal)
-- card UI metadata line for drift and cap horizon
+- v0.7 wallet auth flow (`/auth`) with challenge-sign-verify API
+- Paytaca/Electron/MetaMask auth UX paths in homepage + auth page
+- public profile API/pages and dashboard \"Other Hunters\" links
+- trading listings API and `/trading` page
+- escrow settlement contract stub (`Escrow.cash`)
+- Supabase integration helpers with local fallback
 
 ### Fixed
-- corrected RNG rejection sampling to 64-bit draws for large tier ranges
-- added demo-safe `ENABLE_CHAIN_CALLS=false` path to avoid runtime chain dependency issues in local testing
-- updated docs/env to describe chain-call toggle behavior
+- middleware-protected route model for trading/dashboard/collection auth gating
+- MetaMask auth path now uses strict `personal_sign` recovery verification (removed placeholder acceptance)
+
+## [0.7.0] - 2026-03-18
+
+### Added
+- production-oriented wallet authentication architecture (challenge-sign-verify)
+- app middleware auth guard and session cookie handling
+- wallet auth panel and dedicated auth page
+- profile discovery and profile detail pages
+- trading post listing flow and API surface
+- escrow contract template for atomic token-for-BCH settlement
+- handbook modal section for login/profiles/trading explanation
+
+### Changed
+- app navigation updated to include Auth and Trading routes
+- docs expanded to include auth/trading system design
 
 ## [0.6.0] - 2026-03-18
 

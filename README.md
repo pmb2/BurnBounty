@@ -216,6 +216,25 @@ Live deploy is also VCS-driven via GitHub Actions on push to `main`.
 
 ---
 
+## Auth, Profiles & Trading (v0.7)
+
+BurnBounty now includes a non-custodial auth and marketplace foundation:
+
+- **Wallet auth** via signed challenge (`/auth`)
+- **Paytaca primary**, **Electron Cash fallback**, **MetaMask BCH secondary**
+- **Public profiles** at `/profile/[address]`
+- **Trading post** at `/trading` with listing API
+- **Escrow contract stub** (`contracts/Escrow.cash`) for atomic token+BCH settlement path
+
+Implementation notes:
+
+- No passwords/custodial accounts in app flow
+- Session cookie issued after signature verification
+- Supabase-backed storage is supported when env vars are configured
+- Safe local fallback data paths are included for dev
+
+---
+
 ## Legal & Disclaimer
 
 This is a **collectible NFT project** with utility mechanics.

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { PackOpeningAnimation } from '@/components/PackOpeningAnimation';
 import { Button } from '@/components/ui/button';
 import { GameGuideModal } from '@/components/GameGuideModal';
+import { WalletAuthPanel } from '@/components/WalletAuthPanel';
 
 export default function HomePage() {
   return (
@@ -23,6 +24,12 @@ export default function HomePage() {
           </div>
         </div>
         <PackOpeningAnimation />
+      </section>
+
+      <section className="mt-10">
+        <h2 className="text-xl font-bold">Sign in with BCH Wallet</h2>
+        <p className="mb-4 mt-1 text-zinc-300">Paytaca primary, Electron Cash fallback, MetaMask BCH secondary.</p>
+        <WalletAuthPanel />
       </section>
     </main>
   );

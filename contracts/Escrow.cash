@@ -1,0 +1,30 @@
+pragma cashscript ^0.12.1;
+
+// Escrow covenant stub for secondary-market settlement.
+// Intended flow:
+// - seller escrows NFT into this contract
+// - buyer provides BCH payment
+// - settlement transfers BCH to seller and NFT to buyer atomically
+contract Escrow(pubkey sellerPkh, bytes tokenCategory, bytes expectedCommitment) {
+  // seller can cancel before sale
+  function cancel(pubkey sellerPk, sig sellerSig) {
+    require(hash160(sellerPk) == sellerPkh);
+    require(checkSig(sellerSig, sellerPk));
+
+    require(tx.outputs[0].lockingBytecode == new LockingBytecodeP2PKH(sellerPkh));
+    require(tx.outputs[0].tokenCategory == tokenCategory);
+    require(tx.outputs[0].nftCommitment == expectedCommitment);
+  }
+
+  // simple settlement shape check; payment amount enforced by app/orderbook metadata
+  function settle(pubkey buyerPk) {
+    // output 0: seller receives BCH (value validated by listing acceptance tx template)
+    require(tx.outputs[0].lockingBytecode == new LockingBytecodeP2PKH(sellerPkh));
+    require(tx.outputs[0].tokenCategory == 0x);
+
+    // output 1: buyer receives NFT
+    require(tx.outputs[1].lockingBytecode == new LockingBytecodeP2PKH(hash160(buyerPk)));
+    require(tx.outputs[1].tokenCategory == tokenCategory);
+    require(tx.outputs[1].nftCommitment == expectedCommitment);
+  }
+}

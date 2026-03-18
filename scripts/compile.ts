@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { compileFile } from 'cashscript';
 
-const contracts = ['PackCommit', 'PackReveal', 'PrizePool', 'CardRedeemer'] as const;
+const contracts = ['PackCommit', 'PackReveal', 'PrizePool', 'CardRedeemer', 'Escrow'] as const;
 const artifactsDir = path.join(process.cwd(), 'artifacts');
 mkdirSync(artifactsDir, { recursive: true });
 

@@ -28,6 +28,7 @@ Out of scope (for this POC):
 
 - [Architecture](./architecture.md)
 - [PRD](./PRD.md)
+- [Auth + Trading Setup](./auth-trading.md)
 - [Contract Specifications](./contracts/specifications.md)
 - [RNG Design & Security](./rng.md)
 - [API Specifications](./api.md)

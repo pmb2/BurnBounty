@@ -1,6 +1,6 @@
 {
   "name": "burnbounty-poc",
-  "version": "0.4.0",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -23,8 +23,10 @@
   },
   "dependencies": {
     "@cashscript/sdk": "npm:cashscript@^0.12.1",
+    "@metamask/eth-sig-util": "^8.2.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
+    "@supabase/supabase-js": "^2.52.0",
     "bitcore-lib-cash": "^10.8.6",
     "canvas-confetti": "^1.9.4",
     "cashscript": "^0.12.1",
@@ -55,4 +57,3 @@
     "typescript": "^5.8.2"
   }
 }
-

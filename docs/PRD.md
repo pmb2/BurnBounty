@@ -90,3 +90,31 @@ Required contracts and responsibilities:
 - `PackReveal.cash`: reveal validation + drift/cap commitment payload checks
 - `PrizePool.cash`: reserve control + pro-rata payout support
 - `CardRedeemer.cash`: floor-aware fixed-point redemption payout formula
+
+## Auth, Profiles, Trading (v0.7)
+
+### Authentication
+
+- Non-custodial wallet signature auth (challenge-sign-verify)
+- No email/password requirement
+- Wallet address acts as user identity key
+- Session cookie issued by backend after successful signature verification
+
+Wallet support targets:
+
+- Paytaca (primary UX)
+- Electron Cash (manual sign/verify fallback)
+- MetaMask BCH (secondary compatibility path)
+
+### Public Profiles
+
+- Public profile route: `/profile/[address]`
+- Dashboard includes \"Other Hunters\" discovery panel
+- Profile stores display name, bio, score, and collection snapshot/index data
+
+### Trading
+
+- Listing page: `/trading`
+- Off-chain listing storage (Supabase preferred, local fallback for dev)
+- Escrow covenant template (`Escrow.cash`) for atomic settlement path
+- Future extension: royalties routed to prize pool
