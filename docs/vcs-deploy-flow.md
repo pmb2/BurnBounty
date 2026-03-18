@@ -47,6 +47,7 @@ cp .env.live.example deploy/traefik/.env.live
 Deploy live stack:
 
 ```bash
+npm run db:migrate
 npm run live:up
 ```
 
@@ -78,6 +79,12 @@ Required repo secrets:
 - `LIVE_SSH_KEY`
 - `LIVE_REPO_PATH`
 - optional `LIVE_SSH_PORT` (defaults to 22)
+
+Deploy job should run migrations before container promotion:
+
+```bash
+npm run db:migrate
+```
 
 ## Rollback
 

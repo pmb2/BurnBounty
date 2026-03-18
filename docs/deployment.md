@@ -27,6 +27,8 @@ From `.env.example`:
 - `REVEAL_WINDOW_BLOCKS`
 - `ENABLE_CHAIN_CALLS` (`false` for demo fallback, `true` for real chipnet calls)
 - `DEMO_SHOWCASE_MODE` (`true` only for scripted demo recording)
+- `AUTH_JWT_SECRET`
+- `DATABASE_URL` (or `SUPABASE_DB_URL` / `POSTGRES_URL`) for durable auth persistence
 
 ## Compile Contracts
 
@@ -70,6 +72,21 @@ npm run dev
 npm run typecheck
 npm run build
 ```
+
+## Auth DB Migration (Required)
+
+Before deploying app instances that use wallet auth/session features:
+
+```bash
+npm run db:migrate
+```
+
+This applies auth tables and constraints required for:
+
+- challenge single-use guarantees
+- wallet uniqueness guarantees
+- DB-backed session revocation
+- audit/rate-limit persistence
 
 ## Scripted Functional Test
 
@@ -161,3 +178,13 @@ Required secrets:
 Deployment script used on host:
 
 - `scripts/deploy-live.sh`
+
+## Mixed-Version Deploy Safety
+
+Do not run mixed versions where one build expects in-memory auth state and another expects DB-backed state.
+
+Recommended rollout:
+
+1. Apply DB migration
+2. Deploy new app image/containers
+3. Validate `/api/auth/me`, challenge/verify, logout/revocation

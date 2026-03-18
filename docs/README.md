@@ -19,16 +19,25 @@ In scope:
 
 Out of scope (for this POC):
 
-- Mainnet production readiness.
+- Full mainnet launch readiness for all gameplay/economic components.
 - Full trustless state indexing and database persistence.
 - Custodial key management hardening.
 - Formal legal compliance implementation.
+
+Auth subsystem status:
+
+- Hybrid Option E auth is implemented and production-hardened for DB-backed correctness.
+- Wallet/auth persistence is Postgres-backed with transactional challenge semantics.
 
 ## Core Docs
 
 - [Architecture](./architecture.md)
 - [PRD](./PRD.md)
+- [Auth Architecture](./auth-architecture.md)
+- [Auth Schema & Migration](./auth-schema.md)
 - [Auth + Trading Setup](./auth-trading.md)
+- [Auth Production Readiness](./auth-production-readiness.md)
+- [Wallet Support Matrix](./wallet-support-matrix.md)
 - [Contract Specifications](./contracts/specifications.md)
 - [RNG Design & Security](./rng.md)
 - [API Specifications](./api.md)
@@ -62,7 +71,7 @@ Out of scope (for this POC):
 
 ## Versioning
 
-Current package version: `0.4.0`.
+Current package version: `0.7.0`.
 
 This aligns with v0.4 requirements:
 

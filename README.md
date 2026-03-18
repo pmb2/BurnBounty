@@ -138,7 +138,7 @@ See:
 - **Blockchain**: Bitcoin Cash (CashTokens + covenants)
 - **Smart Contracts**: CashScript (`PackCommit`, `PackReveal`, `PrizePool`, `CardRedeemer`)
 - **Frontend**: Next.js 15 + Tailwind + shadcn/ui + Framer Motion + 3D reveal stack
-- **Wallet**: Chipnet/testnet demo WIF mode for POC
+- **Wallet/Auth**: Hybrid Option E (embedded wallet primary, external BCH signature auth secondary, optional Snap compatibility)
 - **Randomness**: Commit-Reveal + block-linked deterministic entropy
 
 Current status: **working on chipnet/testnet POC**.
@@ -159,6 +159,7 @@ cd BurnBounty
 ```bash
 npm install
 cp .env.example .env.local
+npm run db:migrate
 npm run contracts:compile
 npm run contracts:deploy
 npm run dev
@@ -216,22 +217,78 @@ Live deploy is also VCS-driven via GitHub Actions on push to `main`.
 
 ---
 
-## Auth, Profiles & Trading (v0.7)
+## Hybrid Auth Architecture (Option E)
 
-BurnBounty now includes a non-custodial auth and marketplace foundation:
+BurnBounty uses a BCH-native hybrid authentication model:
 
-- **Wallet auth** via signed challenge (`/auth`)
-- **Paytaca primary**, **Electron Cash fallback**, **MetaMask BCH secondary**
-- **Public profiles** at `/profile/[address]`
-- **Trading post** at `/trading` with listing API
-- **Escrow contract stub** (`contracts/Escrow.cash`) for atomic token+BCH settlement path
+- **Embedded wallet onboarding (primary)**: quickest path for new users; wallet is generated client-side and encrypted locally.
+- **External BCH wallet auth (power user path)**: nonce challenge + signature verification for non-custodial login/link.
+- **MetaMask Snap (optional/experimental)**: supported as a compatibility bridge, never the core BCH identity flow.
 
-Implementation notes:
+Why:
 
-- No passwords/custodial accounts in app flow
-- Session cookie issued after signature verification
-- Supabase-backed storage is supported when env vars are configured
-- Safe local fallback data paths are included for dev
+- BCH is UTXO-based and does not have a universal EVM-style injected provider standard for app identity.
+- Product growth requires low-friction onboarding for first-time players.
+- Crypto-native users still need bring-your-own-wallet proof-of-ownership paths.
+
+Auth endpoints:
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET /api/auth/me`
+- `POST /api/auth/wallet/challenge`
+- `POST /api/auth/wallet/verify`
+- `POST /api/auth/wallet/link`
+- `POST /api/auth/wallet/unlink`
+- `POST /api/auth/wallet/embedded/create`
+
+Compatibility endpoints kept for existing clients:
+
+- `POST /api/auth/challenge`
+- `POST /api/auth/verify`
+
+Security behavior:
+
+- nonce-based challenge messages include purpose + domain + timestamp context
+- one-time challenge enforcement with expiry
+- replay rejection and purpose mismatch rejection
+- wallet rebinding conflict checks
+- middleware validates session signature + expiry for protected routes
+- BCH address normalization is centralized (CashAddr/legacy resolve to one canonical key)
+- embedded and external BCH auth both use the same signed-challenge verification primitives
+- auth-message signatures are not blockchain transactions and do not spend BCH
+- MetaMask Snap compatibility is isolated and non-core
+- current BCH auth verification path is classic compact signed-message verification (BIP322 support is not yet enabled)
+
+Productionization (auth-critical):
+
+- challenges, wallet bindings, sessions, audit events, and auth rate limits are DB-backed (Postgres/Supabase)
+- challenge consumption is atomic and replay-safe under concurrency
+- wallet identity uniqueness is enforced with durable DB constraints on canonical BCH storage key
+- session revocation is durable (`auth_sessions.revoked_at`)
+- sensitive actions use recent-auth checks (`recent_auth_at`)
+
+### Local Auth Testing
+
+1. Start app:
+
+```bash
+npm run dev
+```
+
+Ensure `DATABASE_URL` (or `SUPABASE_DB_URL`) is set before running auth flows.
+
+2. Go to `/auth` and run:
+- Embedded quick-start register + login
+- External BCH challenge-sign-verify login
+- Link/unlink wallet checks
+
+3. Run auth tests:
+
+```bash
+npm run test:auth
+```
 
 ---
 
@@ -265,6 +322,11 @@ See:
 
 - [System Overview](./docs/README.md)
 - [Architecture](./docs/architecture.md)
+- [Auth Architecture](./docs/auth-architecture.md)
+- [Auth Schema & Migration](./docs/auth-schema.md)
+- [Auth + Trading Setup](./docs/auth-trading.md)
+- [Auth Production Readiness](./docs/auth-production-readiness.md)
+- [Wallet Support Matrix](./docs/wallet-support-matrix.md)
 - [Contract Specifications](./docs/contracts/specifications.md)
 - [RNG Design & Security](./docs/rng.md)
 - [API Specifications](./docs/api.md)

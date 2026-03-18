@@ -87,11 +87,11 @@ export function GameGuideModal({ variant = 'bottom-nav' }: { variant?: TriggerVa
 
               <section className="rounded-xl border border-border/70 bg-black/25 p-4">
                 <h3 className="mb-2 text-lg font-bold text-amber-200">7) Login, Profiles & Trading</h3>
-                <p>BurnBounty uses wallet signature auth (no passwords, no custody). Public profiles show hunter collections, and the trading post supports off-chain listings with on-chain settlement through escrow covenants.</p>
+                <p>BurnBounty uses hybrid auth: embedded wallet quick-start for new hunters, external BCH signature auth for power users, and optional MetaMask Snap compatibility. Public profiles show hunter collections, and the trading post supports off-chain listings with on-chain settlement through escrow covenants.</p>
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-zinc-300">
-                  <li>Paytaca: primary mobile UX</li>
-                  <li>Electron Cash: manual sign + verify fallback</li>
-                  <li>MetaMask BCH: secondary compatibility path</li>
+                  <li>Embedded wallet: primary onboarding path</li>
+                  <li>External BCH wallet: sign challenge to login/link</li>
+                  <li>MetaMask Snap: optional experimental path</li>
                 </ul>
               </section>
             </div>

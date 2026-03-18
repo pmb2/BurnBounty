@@ -13,6 +13,7 @@
 - `POST /api/commit-pack`
 - `POST /api/reveal-pack`
 - `POST /api/redeem`
+- hybrid auth endpoints (`/api/auth/*`)
 
 3. Contract Layer
 - `PackCommit`
@@ -24,6 +25,7 @@
 - RNG generation and entropy handling (`lib/rng.ts`)
 - deterministic verifier parity (`lib/verify.ts`)
 - CashScript orchestration (`lib/cashscript.ts`)
+- auth services/challenge/session logic (`lib/auth/*`)
 
 ## State Model
 
@@ -35,6 +37,7 @@ POC state is mixed:
 Key local storage keys:
 
 - `burnbounty.wif`
+- `burnbounty.embedded.v1.<userId>`
 - `burnbounty.pendingReveal`
 - `burnbounty.collection`
 - `burnbounty.totalRedeemed`
@@ -45,6 +48,8 @@ Key local storage keys:
 - User seed + nonce generation occurs client-side.
 - API verifies reveal commitment against pending state.
 - Deterministic card generation can be independently audited using verifier helpers.
+- Embedded wallet private keys are generated client-side and encrypted before local persistence.
+- External wallet authentication uses one-time nonce challenges with server-side signature verification.
 
 ## Sequence (Commit -> Reveal -> Redeem)
 
@@ -79,5 +84,6 @@ Redeem:
 - Persist pending packs and card ownership in server-side DB/indexer.
 - Replace mock block hash references with chain-indexed values.
 - Add covenant state proofs and strict UTXO tracking.
-- Integrate robust wallet standard, remove raw WIF UX.
+- Keep raw WIF as gameplay-only compatibility mode while auth uses Hybrid Option E.
+- Continue hardening DB-backed auth operations and sensitive-action policy as gameplay scope expands.
 

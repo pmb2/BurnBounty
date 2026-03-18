@@ -1,52 +1,85 @@
-# Auth + Trading Setup (v0.7)
+# Auth + Trading Setup
+
+## Summary
+
+BurnBounty uses Hybrid Option E auth:
+
+- Embedded wallet onboarding is primary UX
+- External BCH signed-challenge auth is the power-user path
+- MetaMask Snap is optional/experimental and non-core
+
+Trading surfaces should always rely on authenticated server-side session checks and canonical wallet ownership records.
 
 ## Environment Variables
 
-Add to `.env.local` (dev) and live env as needed:
+Required for auth persistence:
+
+```env
+AUTH_JWT_SECRET=
+DATABASE_URL=
+# optional alias if preferred by infra:
+SUPABASE_DB_URL=
+POSTGRES_URL=
+```
+
+Optional Supabase client envs for frontend data integration:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
-AUTH_JWT_SECRET=
 ```
 
-## Recommended Supabase Tables
+## Auth Endpoints
 
-- `profiles`
-  - `address text primary key`
-  - `display_name text`
-  - `bio text`
-  - `score int`
-  - `created_at timestamptz default now()`
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET /api/auth/me`
+- `POST /api/auth/wallet/challenge`
+- `POST /api/auth/wallet/verify`
+- `POST /api/auth/wallet/link`
+- `POST /api/auth/wallet/unlink`
+- `POST /api/auth/wallet/embedded/create`
+- `POST /api/auth/wallet/embedded/export/request`
 
-- `collections`
-  - `address text primary key`
-  - `cards jsonb`
-  - `updated_at timestamptz default now()`
-
-- `listings`
-  - `id uuid primary key default gen_random_uuid()`
-  - `seller_address text`
-  - `card_id text`
-  - `price_sats bigint`
-  - `note text`
-  - `expires_at timestamptz`
-  - `created_at timestamptz default now()`
-
-## Routes
+Compatibility shims:
 
 - `POST /api/auth/challenge`
 - `POST /api/auth/verify`
-- `POST /api/auth/logout`
-- `GET /api/profiles`
-- `GET /api/profile/[address]`
-- `GET/POST /api/trading/listings`
 
-## Notes
+## Persistence and Constraints
 
-- Electron/Paytaca verification uses bitcore message verify path.
-- MetaMask flow now verifies `personal_sign` server-side via address recovery.
-- MetaMask path is for EVM-address auth compatibility; BCH wallet auth remains Paytaca/Electron-first.
-- Middleware currently protects `/dashboard`, `/collection`, `/trading`.
+Auth-critical state is Postgres-backed:
+
+- identities
+- wallet bindings
+- challenge/nonce lifecycle
+- sessions + revocation
+- audit events
+- auth rate limits
+
+Key invariants:
+
+- wallet identity uniqueness via canonical BCH storage key
+- challenge single-use (atomic consume)
+- session revocation enforced by DB lookup
+
+## Trading Integration Notes
+
+Trading APIs should:
+
+1. authenticate via `validateSessionToken`
+2. resolve wallet ownership from `auth_wallets`
+3. reject stale/revoked sessions
+4. use audit events for sensitive state changes
+
+Escrow settlement remains covenant-based (`contracts/Escrow.cash`) and should be treated as separate from auth proof logic.
+
+## Security Checklist
+
+- Do not log WIF/seed/decrypted wallet material.
+- Enforce recent-auth for sensitive wallet operations.
+- Keep MetaMask Snap off by default unless intentionally enabled.
+- Run DB migrations before deploying auth-dependent releases.

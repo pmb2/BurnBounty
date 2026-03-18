@@ -95,16 +95,20 @@ Required contracts and responsibilities:
 
 ### Authentication
 
-- Non-custodial wallet signature auth (challenge-sign-verify)
-- No email/password requirement
-- Wallet address acts as user identity key
-- Session cookie issued by backend after successful signature verification
+- Hybrid Option E model:
+  - embedded wallet onboarding is primary for growth UX
+  - external BCH signature auth is the advanced/power-user path
+  - MetaMask Snap is optional experimental compatibility
+- Authentication and wallet binding are separate domain concepts:
+  - user session identity can exist before external wallet linking
+  - one or more wallets may be linked under explicit policy
+- Session cookie is signed and validated at middleware boundary
 
 Wallet support targets:
 
-- Paytaca (primary UX)
-- Electron Cash (manual sign/verify fallback)
-- MetaMask BCH (secondary compatibility path)
+- Embedded wallet (primary UX)
+- External BCH (Paytaca/Electron/manual sign)
+- MetaMask Snap (optional/experimental)
 
 ### Public Profiles
 

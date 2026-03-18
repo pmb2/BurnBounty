@@ -1,8 +1,8 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import crypto from 'node:crypto';
-import { setChallenge, pruneChallenges } from '@/lib/auth/challenge-store';
+import { createWalletChallenge } from '@/lib/auth/service';
+import { enforceSameOriginOrThrow, jsonAuthError, rateLimitOrThrow } from '@/lib/auth/http';
+import type { WalletProviderKind, WalletSignMode } from '@/types/auth';
 
 const schema = z.object({
   address: z.string().min(6),
@@ -11,20 +11,30 @@ const schema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    pruneChallenges();
+    enforceSameOriginOrThrow(req);
+    await rateLimitOrThrow(req, 'auth-challenge-legacy', 30, 60_000);
     const body = schema.parse(await req.json());
-    const nonce = crypto.randomBytes(16).toString('hex');
-    const message = [
-      'BurnBounty Login Challenge',
-      `Address: ${body.address}`,
-      `Wallet: ${body.walletType}`,
-      `Nonce: ${nonce}`,
-      `IssuedAt: ${new Date().toISOString()}`
-    ].join('\n');
-
-    setChallenge(body.address, body.walletType, message, nonce);
-    return NextResponse.json({ nonce, message, address: body.address, walletType: body.walletType });
+    const walletProvider: WalletProviderKind = body.walletType === 'metamask' ? 'metamask_snap' : 'external_bch';
+    const walletSignMode: WalletSignMode = body.walletType === 'metamask' ? 'metamask_snap' : body.walletType;
+    const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || 'localhost:3000';
+    const challenge = await createWalletChallenge({
+      actionLabel: 'Login',
+      purpose: 'login',
+      walletProvider,
+      walletSignMode,
+      domain: host,
+      address: body.address
+    });
+    return NextResponse.json({
+      nonce: challenge.nonce,
+      message: challenge.challenge,
+      address: body.address,
+      walletType: body.walletType,
+      challengeId: challenge.id,
+      expiresAt: challenge.expiresAt,
+      compatibilityMode: true
+    });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Challenge failed' }, { status: 400 });
+    return jsonAuthError(err, 'Challenge failed');
   }
 }

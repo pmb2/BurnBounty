@@ -27,8 +27,10 @@ export default function HomePage() {
       </section>
 
       <section className="mt-10">
-        <h2 className="text-xl font-bold">Sign in with BCH Wallet</h2>
-        <p className="mb-4 mt-1 text-zinc-300">Paytaca primary, Electron Cash fallback, MetaMask BCH secondary.</p>
+        <h2 className="text-xl font-bold">Get Started: Hybrid Wallet Auth</h2>
+        <p className="mb-4 mt-1 text-zinc-300">
+          Embedded wallet onboarding is the default path for fastest activation. External BCH wallet signature login is available for self-custody users. MetaMask Snap is optional and experimental.
+        </p>
         <WalletAuthPanel />
       </section>
     </main>

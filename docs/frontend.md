@@ -3,10 +3,29 @@
 ## Routes
 
 - `/` landing page
+- `/auth` hybrid auth hub
 - `/commit` commitment step
 - `/reveal` reveal/open step
 - `/collection` owned card actions
 - `/dashboard` aggregate counters
+- `/profile/[address]` public hunter profile
+- `/trading` listing board
+
+## Auth Page
+
+Behavior:
+
+1. Embedded wallet quick-start (recommended):
+   - register/login with username + passphrase
+   - generate encrypted embedded wallet client-side
+2. External BCH auth:
+   - request nonce challenge
+   - sign via wallet
+   - verify server-side
+3. Optional MetaMask Snap:
+   - explicit experimental lane only
+
+Account panel supports wallet link/unlink actions.
 
 ## Commit Page
 
@@ -52,7 +71,10 @@ Displays local aggregate counters:
 
 ## UX and Safety Notes
 
-- Wallet connector is demo WIF only.
+- Embedded wallet is primary onboarding path for conversion.
+- External BCH wallet auth is power-user/non-custodial path.
+- MetaMask Snap is optional and explicitly non-core.
+- Legacy WIF connector remains for chipnet gameplay actions only.
 - UI explicitly warns against mainnet/private production key use.
 - Flow intentionally favors transparency over gamified opacity.
 

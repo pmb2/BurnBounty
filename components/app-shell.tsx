@@ -8,7 +8,7 @@ import { GameGuideModal } from './GameGuideModal';
 
 const links = [
   { href: '/', label: 'Home' },
-  { href: '/auth', label: 'Auth' },
+  { href: '/auth', label: 'Auth Hub' },
   { href: '/commit', label: 'Commit' },
   { href: '/reveal', label: 'Reveal' },
   { href: '/collection', label: 'Collection' },
