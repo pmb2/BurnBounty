@@ -35,6 +35,12 @@ npm install
 npm run dev
 ```
 
+Auth release gate before promoting to `main`:
+
+```bash
+npm run release:auth-gate
+```
+
 ## Live Deploy Commands (Server)
 
 One-time prep:

@@ -16,9 +16,11 @@
     "contracts:compile": "tsx scripts/compile.ts",
     "contracts:deploy": "tsx scripts/deploy.ts",
     "db:migrate": "tsx scripts/db-migrate.ts",
+    "db:migrate:test": "cross-env AUTH_TEST_USE_INMEM_DB=true tsx scripts/db-migrate.ts",
     "test:flow": "tsx scripts/test-flow.ts",
     "test:demo-flow": "tsx scripts/demo-showcase-flow.ts",
     "test:auth": "cross-env AUTH_TEST_USE_INMEM_DB=true node --import tsx --test --test-concurrency=1 tests/auth/*.test.ts",
+    "release:auth-gate": "npm run db:migrate:test && npm run test:auth && npm run typecheck && npm run build",
     "gen:cards": "tsx scripts/generate-card-assets.ts",
     "live:up": "docker compose -f deploy/traefik/docker-compose.existing-traefik.yml --env-file deploy/traefik/.env.live up -d --build",
     "live:down": "docker compose -f deploy/traefik/docker-compose.existing-traefik.yml --env-file deploy/traefik/.env.live down"

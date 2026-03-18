@@ -35,6 +35,9 @@ export async function POST(req: NextRequest) {
       address: body.address,
       walletType: body.walletType,
       compatibilityMode: true,
+      deprecated: true,
+      deprecationNote: 'Use /api/auth/wallet/verify instead.',
+      sunsetDate: '2026-06-30',
       user: result.user,
       wallets: result.wallets
     });
@@ -45,6 +48,8 @@ export async function POST(req: NextRequest) {
       path: '/',
       maxAge: 60 * 60 * 24 * 7
     });
+    res.headers.set('Deprecation', 'true');
+    res.headers.set('Sunset', '2026-06-30');
     return res;
   } catch (err: any) {
     return jsonAuthError(err, 'Verify failed');

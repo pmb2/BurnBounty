@@ -18,6 +18,15 @@ BurnBounty uses **BCH signed-message challenge verification** for BCH wallet aut
 | External BCH Wallet | Power-user self-custody | `paytaca`, `electrum`, `manual` | Supported | Challenge-sign-verify flow, replay-safe, BCH-first |
 | MetaMask Snap | Optional compatibility | `metamask_snap` | Experimental | Isolated path, non-core for BCH identity |
 
+## What "Supported" Means
+
+Supported means:
+
+1. challenge issuance and verification pass through the canonical auth service path,
+2. canonical identity checks are enforced,
+3. route-level tests cover success/failure behavior for the mode,
+4. the mode is included in current docs and operational guidance.
+
 ## Signature Mode Compatibility
 
 ### BCH Modes (`paytaca`, `electrum`, `manual`)
@@ -25,6 +34,10 @@ BurnBounty uses **BCH signed-message challenge verification** for BCH wallet aut
 - Uses BCH-compatible compact signed-message verification (`bitcore-lib-cash` stack).
 - Address checks are performed against canonical normalized BCH storage key.
 - CashAddr and legacy formats are normalized prior to comparison.
+- Tested categories in this repo:
+  - manual sign flow (fixture/private-key driven tests)
+  - external BCH challenge-sign-verify service path
+  - canonical identity normalization parity (cashaddr/legacy)
 
 ### MetaMask Snap Mode (`metamask_snap`)
 

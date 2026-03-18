@@ -7,6 +7,20 @@ Format inspired by Keep a Changelog and semantic versioning.
 ## [Unreleased]
 
 ### Added
+- Auth finalization pass:
+  - route-level acceptance tests for register/login/me/logout revocation, replay rejection, concurrent verify single-winner semantics, wallet-link conflict, recent-auth enforcement, legacy shim canonical parity, and auth-critical trading listing checks
+  - new docs:
+    - `docs/auth-release-checklist.md`
+    - `docs/auth-operations.md`
+    - `docs/auth-production-signoff.md`
+  - release command gate: `npm run release:auth-gate`
+  - CI gate updates to run auth migration check and auth tests
+
+### Changed
+- Legacy compatibility routes now emit explicit deprecation metadata/headers with sunset (`2026-06-30`):
+  - `/api/auth/challenge`
+  - `/api/auth/verify`
+- Trading listing create endpoint now enforces DB-backed authenticated session and canonical wallet ownership checks.
 - Auth productionization pass (v0.8 pre-release):
   - durable Postgres-backed auth persistence (`auth_users`, identities, wallets, challenges, sessions, audit events, rate-limits)
   - transactional single-use challenge consumption under concurrent verification

@@ -24,6 +24,18 @@ if [ ! -f "$ENV_FILE" ]; then
   exit 1
 fi
 
+echo "[deploy-live] Installing dependencies for migration step"
+npm ci
+
+echo "[deploy-live] Loading live environment for DB migration"
+set -a
+# shellcheck disable=SC1090
+source "$ENV_FILE"
+set +a
+
+echo "[deploy-live] Running DB migration"
+npm run db:migrate
+
 echo "[deploy-live] Building and starting live stack"
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --build
 

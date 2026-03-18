@@ -248,6 +248,11 @@ Compatibility endpoints kept for existing clients:
 - `POST /api/auth/challenge`
 - `POST /api/auth/verify`
 
+Legacy shim policy:
+
+- compatibility-only wrappers around canonical auth service
+- deprecated with sunset date: `2026-06-30`
+
 Security behavior:
 
 - nonce-based challenge messages include purpose + domain + timestamp context
@@ -288,6 +293,12 @@ Ensure `DATABASE_URL` (or `SUPABASE_DB_URL`) is set before running auth flows.
 
 ```bash
 npm run test:auth
+```
+
+4. Run full auth release gate:
+
+```bash
+npm run release:auth-gate
 ```
 
 ---

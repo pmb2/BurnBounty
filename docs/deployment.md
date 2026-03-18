@@ -188,3 +188,17 @@ Recommended rollout:
 1. Apply DB migration
 2. Deploy new app image/containers
 3. Validate `/api/auth/me`, challenge/verify, logout/revocation
+
+## Auth Release Gates
+
+Before promoting to live, run:
+
+```bash
+npm run release:auth-gate
+```
+
+See full operator checklist:
+
+- `docs/auth-release-checklist.md`
+- `docs/auth-operations.md`
+- `docs/auth-production-signoff.md`

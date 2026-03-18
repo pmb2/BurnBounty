@@ -202,7 +202,14 @@ Sensitive-action guard for embedded export/reveal flows.
 - `POST /api/auth/challenge`
 - `POST /api/auth/verify`
 
+These are compatibility shims only:
+
+- deprecated (`Deprecation: true`)
+- sunset target: `2026-06-30`
+- they still route through the canonical challenge/signature verification service and do not bypass canonical address or replay protections
+
 ## Operational Notes
 
 - POC returns fallback mock txids if chain call is unavailable.
 - For production, replace with strict erroring + reliable chain index persistence.
+- `POST /api/trading/listings` is treated as auth-critical and requires a valid DB-backed session plus canonical linked seller wallet ownership.

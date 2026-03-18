@@ -75,6 +75,8 @@ Trading APIs should:
 3. reject stale/revoked sessions
 4. use audit events for sensitive state changes
 
+`POST /api/trading/listings` now enforces authenticated DB-backed session validation and requires the seller address to be linked to the authenticated user via canonical BCH wallet identity checks.
+
 Escrow settlement remains covenant-based (`contracts/Escrow.cash`) and should be treated as separate from auth proof logic.
 
 ## Security Checklist

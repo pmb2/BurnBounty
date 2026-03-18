@@ -98,6 +98,11 @@ Embedded wallet is generated client-side and encrypted in local storage.
 
 Server does not store decrypted private keys or seed phrases.
 
+Compromised-client caveat:
+
+- if a user device/browser context is compromised, local encrypted wallet material may still be at risk.
+- server-side recent-auth guards protect sensitive server actions, not local device compromise.
+
 ## Sensitive Action Re-Verification
 
 Challenge purpose supports:
@@ -114,6 +119,15 @@ MetaMask/Snap path is isolated in dedicated module:
 - `lib/auth/metamask-snap.ts`
 
 It does not replace BCH verification primitives and is not default onboarding.
+
+## Legacy Compatibility Routes
+
+Temporarily retained:
+
+- `/api/auth/challenge`
+- `/api/auth/verify`
+
+Both call the same canonical challenge/signature service path as modern routes and are deprecated with sunset date `2026-06-30`.
 
 ## Multi-Instance Safety
 

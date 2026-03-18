@@ -25,15 +25,21 @@ export async function POST(req: NextRequest) {
       domain: host,
       address: body.address
     });
-    return NextResponse.json({
+    const res = NextResponse.json({
       nonce: challenge.nonce,
       message: challenge.challenge,
       address: body.address,
       walletType: body.walletType,
       challengeId: challenge.id,
       expiresAt: challenge.expiresAt,
-      compatibilityMode: true
+      compatibilityMode: true,
+      deprecated: true,
+      deprecationNote: 'Use /api/auth/wallet/challenge instead.',
+      sunsetDate: '2026-06-30'
     });
+    res.headers.set('Deprecation', 'true');
+    res.headers.set('Sunset', '2026-06-30');
+    return res;
   } catch (err: any) {
     return jsonAuthError(err, 'Challenge failed');
   }

@@ -51,6 +51,26 @@ Status: **Production-safe for auth correctness**, with noted operational caveats
   - session revocation
 - IP/User-Agent are hashed, not stored raw.
 
+## Authoritative vs Non-Authoritative Trust Paths
+
+Authoritative for privileged/auth-critical decisions:
+
+1. `validateSessionToken` DB-backed validation (`auth_sessions`).
+2. Atomic challenge consume transition in `auth_wallet_challenges`.
+3. Canonical BCH identity comparisons using normalized storage keys.
+4. DB uniqueness constraints for wallet identity binding.
+
+Non-authoritative (coarse filter only):
+
+1. Edge middleware token integrity/expiry check (`verifySessionTokenEdge`).
+2. Client-side wallet state/localStorage.
+
+Rule:
+
+- Middleware pass is never sufficient for auth-critical authorization.
+- Server route validation is required for all privileged actions.
+- This includes non-`/api/auth/*` privileged endpoints such as `POST /api/trading/listings`.
+
 ## Required Environment
 
 Set one of:
