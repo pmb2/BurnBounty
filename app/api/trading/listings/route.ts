@@ -8,7 +8,7 @@ import { getWalletsForUser } from '@/lib/auth/store';
 import { authError } from '@/lib/auth/errors';
 
 const listingSchema = z.object({
-  seller_address: z.string().min(6),
+  seller_address: z.string().min(6).optional(),
   card_id: z.string().min(6),
   price_sats: z.number().int().positive(),
   note: z.string().optional(),
@@ -27,13 +27,34 @@ export async function POST(req: NextRequest) {
     const session = await validateSessionToken(req.cookies.get(sessionCookieName)?.value || null);
     if (!session?.userId) throw authError('auth_required');
 
-    const body = listingSchema.parse(await req.json());
-    const sellerCanonical = normalizeBchAddress(body.seller_address).canonicalCashAddr;
-    const wallets = await getWalletsForUser(session.userId);
-    const ownsSellerAddress = wallets.some((w) => addressesEqual(w.address, sellerCanonical));
-    if (!ownsSellerAddress) {
-      throw authError('wallet_not_bound', 'Seller address is not linked to this account');
+    const parsed = listingSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return NextResponse.json(
+        { ok: false, error: 'validation_failed', details: parsed.error.flatten() },
+        { status: 400 }
+      );
     }
+    const body = parsed.data;
+
+    const wallets = await getWalletsForUser(session.userId);
+    if (wallets.length === 0) {
+      throw authError('wallet_not_bound', 'No linked wallet found for this account');
+    }
+
+    const defaultWallet = wallets.find((w) => w.isPrimary) || wallets[0];
+    if (!defaultWallet?.address) {
+      throw authError('wallet_not_bound', 'Primary wallet is missing');
+    }
+
+    let sellerCanonical = defaultWallet.address;
+    if (body.seller_address) {
+      sellerCanonical = normalizeBchAddress(body.seller_address).canonicalCashAddr;
+      const ownsSellerAddress = wallets.some((w) => addressesEqual(w.address, sellerCanonical));
+      if (!ownsSellerAddress) {
+        throw authError('wallet_not_bound', 'Seller address is not linked to this account');
+      }
+    }
+
     const created = await createTradingListing({
       seller_address: sellerCanonical,
       card_id: body.card_id,

@@ -41,6 +41,12 @@ Format inspired by Keep a Changelog and semantic versioning.
   - hunter stats panel (ELO, streak, win rate, total matches)
   - legacy `/commit` and `/reveal` routes now redirect to `/play`
   - auth `next` paths updated from `/play?step=...` to `/play`
+- market listing and card presentation updates:
+  - listing POST now accepts optional `seller_address` and derives linked wallet safely server-side
+  - clearer request validation errors for listing creation
+  - trading listings now persist in local Postgres (`market_listings`) with Supabase fallback
+  - card UI text now follows rarity color theme (Bronze/Silver/Gold/Diamond)
+  - serial/ID line replaced by visible stat summary (drift/cap/burn reward)
 - Home onboarding flow now prioritizes one dominant CTA (`Start Playing`) and defers advanced wallet methods.
 - Auth Hub now defaults to embedded onboarding and gates external/Snap under explicit advanced options.
 - Header wallet state now shows persistent auth status with wallet-type context; gameplay WIF input is collapsed.

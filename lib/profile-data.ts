@@ -1,5 +1,6 @@
 import type { CardAsset } from '@/types/cards';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { dbQuery } from '@/lib/db/postgres';
 
 const fallbackProfiles = [
   { address: 'bitcoincash:qzsamplehunter1', display_name: 'Dust Ranger', bio: 'Bronze grinder on the frontier.', score: 42 },
@@ -32,16 +33,40 @@ export async function getProfile(address: string) {
 }
 
 export async function listTradingListings() {
-  const supabase = getSupabaseAdmin();
-  if (!supabase) return [];
-  const { data } = await supabase.from('listings').select('*').order('created_at', { ascending: false }).limit(50);
-  return data || [];
+  try {
+    const { rows } = await dbQuery(
+      `select id::text, seller_address, card_id, price_sats::text as price_sats, note, expires_at, created_at
+       from market_listings
+       order by created_at desc
+       limit 50`
+    );
+    return rows.map((row: any) => ({
+      ...row,
+      price_sats: Number(row.price_sats)
+    }));
+  } catch {
+    const supabase = getSupabaseAdmin();
+    if (!supabase) return [];
+    const { data } = await supabase.from('listings').select('*').order('created_at', { ascending: false }).limit(50);
+    return data || [];
+  }
 }
 
 export async function createTradingListing(input: { seller_address: string; card_id: string; price_sats: number; note?: string; expires_at?: string }) {
-  const supabase = getSupabaseAdmin();
-  if (!supabase) return { id: `mock-${Date.now()}`, ...input };
-  const { data, error } = await supabase.from('listings').insert(input).select('*').single();
-  if (error) throw error;
-  return data;
+  try {
+    const { rows } = await dbQuery(
+      `insert into market_listings (seller_address, card_id, price_sats, note, expires_at)
+       values ($1, $2, $3, $4, $5)
+       returning id::text, seller_address, card_id, price_sats::text as price_sats, note, expires_at, created_at`,
+      [input.seller_address, input.card_id, input.price_sats, input.note || null, input.expires_at || null]
+    );
+    const row: any = rows[0];
+    return { ...row, price_sats: Number(row.price_sats) };
+  } catch {
+    const supabase = getSupabaseAdmin();
+    if (!supabase) return { id: `mock-${Date.now()}`, ...input };
+    const { data, error } = await supabase.from('listings').insert(input).select('*').single();
+    if (error) throw error;
+    return data;
+  }
 }

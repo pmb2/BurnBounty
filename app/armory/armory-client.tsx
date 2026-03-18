@@ -26,6 +26,7 @@ type SortOption =
 type MeResponse = {
   ok: boolean;
   user: { id: string; profile?: { displayName?: string } };
+  wallets?: Array<{ address: string; type: string; isPrimary?: boolean }>;
   primaryWallet?: { address: string; type: string } | null;
 };
 
@@ -78,6 +79,13 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
       .then((me) => setSession(me))
       .catch(() => setSession(null));
   }, []);
+
+  useEffect(() => {
+    if (!cards.length) return;
+    if (!selectedCardId || !cards.some((c) => c.nftId === selectedCardId)) {
+      setSelectedCardId(cards[0].nftId);
+    }
+  }, [cards, selectedCardId]);
 
   useEffect(() => {
     fetch('/api/trading/listings')
@@ -138,22 +146,35 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
 
   async function createListing() {
     try {
-      if (!session?.primaryWallet?.address) {
+      const sellerAddress = session?.primaryWallet?.address || session?.wallets?.[0]?.address;
+      if (!sellerAddress) {
         throw new Error('Primary wallet not available. Link a wallet in Auth Hub first.');
       }
       if (!selectedCardId) throw new Error('Select a card first.');
+      const priceSats = Number(price);
+      if (!Number.isFinite(priceSats) || priceSats <= 0) {
+        throw new Error('Price must be a positive number of sats.');
+      }
       const res = await fetch('/api/trading/listings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          seller_address: session.primaryWallet.address,
+          seller_address: sellerAddress,
           card_id: selectedCardId,
-          price_sats: Number(price),
+          price_sats: priceSats,
           note
         })
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Create listing failed');
+      if (!res.ok) {
+        if (json?.details?.fieldErrors) {
+          const flattened = Object.entries(json.details.fieldErrors)
+            .flatMap(([field, messages]) => (messages as string[]).map((msg) => `${field}: ${msg}`))
+            .join(' | ');
+          throw new Error(flattened || json.error || 'Create listing failed');
+        }
+        throw new Error(json.error || 'Create listing failed');
+      }
       toast.success('Listing created');
       setNote('');
 
@@ -187,6 +208,12 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
         return list.reverse();
     }
   }, [cards, sortBy]);
+
+  const cardById = useMemo(() => {
+    const map = new Map<string, CardAsset>();
+    for (const card of cards) map.set(card.nftId, card);
+    return map;
+  }, [cards]);
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
@@ -275,7 +302,7 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
                 {cards.length === 0 && <option value="">No cards available</option>}
                 {cards.map((card) => (
                   <option key={card.nftId} value={card.nftId} className="bg-[#111]">
-                    {card.name} • {card.serial}
+                    {card.name} • {card.tier} • {(card.faceValueSats / 1e8).toFixed(4)} BCH • {card.weeklyDriftMilli >= 0 ? '+' : ''}{(card.weeklyDriftMilli / 10).toFixed(1)}%/wk
                   </option>
                 ))}
               </select>
@@ -287,7 +314,18 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
             <div className="mt-6 space-y-2">
               {listings.map((l) => (
                 <article key={l.id} className="rounded border border-border/70 bg-black/20 p-3 text-sm">
-                  <p><span className="text-zinc-400">Card:</span> {l.card_id}</p>
+                  {(() => {
+                    const listedCard = cardById.get(l.card_id);
+                    if (listedCard) {
+                      return (
+                        <>
+                          <p><span className="text-zinc-400">Card:</span> {listedCard.name} ({listedCard.tier})</p>
+                          <p><span className="text-zinc-400">Stats:</span> {(listedCard.faceValueSats / 1e8).toFixed(4)} BCH • {listedCard.weeklyDriftMilli >= 0 ? '+' : ''}{(listedCard.weeklyDriftMilli / 10).toFixed(1)}%/wk • cap {(listedCard.randomCapWeeks / 52).toFixed(1)}y</p>
+                        </>
+                      );
+                    }
+                    return <p><span className="text-zinc-400">Card:</span> Unknown card ({String(l.card_id).slice(0, 16)}...)</p>;
+                  })()}
                   <p><span className="text-zinc-400">Price:</span> {(Number(l.price_sats) / 1e8).toFixed(8)} BCH</p>
                   <p><span className="text-zinc-400">Seller:</span> {l.seller_address}</p>
                   {l.note && <p><span className="text-zinc-400">Note:</span> {l.note}</p>}

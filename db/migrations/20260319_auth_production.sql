@@ -119,3 +119,18 @@ create table if not exists auth_schema_migrations (
   id text primary key,
   applied_at timestamptz not null default now()
 );
+
+-- Trading listings (local durable fallback/store)
+create table if not exists market_listings (
+  id uuid primary key default gen_random_uuid(),
+  seller_address text not null,
+  card_id text not null,
+  price_sats bigint not null check (price_sats > 0),
+  note text,
+  expires_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_market_listings_created_at on market_listings(created_at desc);
+create index if not exists idx_market_listings_seller on market_listings(seller_address);
