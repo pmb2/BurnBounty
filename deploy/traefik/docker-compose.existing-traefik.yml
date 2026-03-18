@@ -1,4 +1,21 @@
 services:
+  burnbounty-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${BB_DB_NAME:-burnbounty}
+      POSTGRES_USER: ${BB_DB_USER:-burnbounty}
+      POSTGRES_PASSWORD: ${BB_DB_PASSWORD:-burnbounty_change_me}
+    volumes:
+      - burnbounty_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${BB_DB_USER:-burnbounty} -d ${BB_DB_NAME:-burnbounty}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app_internal
+
   burnbounty:
     container_name: burnbounty-app
     build:
@@ -10,6 +27,9 @@ services:
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_APP_ENV: ${NEXT_PUBLIC_APP_ENV:-live}
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-burnbounty-live-change-me}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${BB_DB_USER:-burnbounty}:${BB_DB_PASSWORD:-burnbounty_change_me}@burnbounty-db:5432/${BB_DB_NAME:-burnbounty}}
+      SUPABASE_DB_URL: ${SUPABASE_DB_URL:-postgresql://${BB_DB_USER:-burnbounty}:${BB_DB_PASSWORD:-burnbounty_change_me}@burnbounty-db:5432/${BB_DB_NAME:-burnbounty}}
       ENABLE_CHAIN_CALLS: ${ENABLE_CHAIN_CALLS:-false}
       PACK_PRICE_SATS: ${PACK_PRICE_SATS:-100000}
       CHIPNET_ELECTRUM: ${CHIPNET_ELECTRUM:-chipnet.imaginary.cash:50004}
@@ -25,8 +45,12 @@ services:
       DEMO_SHOWCASE_FACE_SATS: ${DEMO_SHOWCASE_FACE_SATS:-120000000000}
       MOCK_CHAIN_HEIGHT: ${MOCK_CHAIN_HEIGHT:-1740005}
       MOCK_BLOCK_HASH: ${MOCK_BLOCK_HASH:-00ff11aa22bb33cc44dd55ee66ff77aa88bb99cc00ddeeff1122334455667788}
+    depends_on:
+      burnbounty-db:
+        condition: service_healthy
     networks:
       - edge_proxy
+      - app_internal
     labels:
       - traefik.enable=true
       - traefik.docker.network=backend_edge
@@ -44,3 +68,7 @@ networks:
   edge_proxy:
     name: backend_edge
     external: true
+  app_internal:
+
+volumes:
+  burnbounty_pgdata:

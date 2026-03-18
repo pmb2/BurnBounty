@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { isLikelyTestnetWif, maskWif } from '@/lib/wif';
+import { ActiveBoardBackdrop } from '@/components/ActiveBoardBackdrop';
 
 const SERIES_OPTIONS = [
   { value: 'GENESIS_BETA', label: 'Genesis Beta (Series 1)', priceSats: 5_000_000, perk: 'Min drift +5/wk' },
@@ -87,8 +88,9 @@ export default function CommitPage() {
         Need account access first? Use quick start from <Link className="text-emerald-300 underline" href="/auth?mode=embedded&next=/commit">Auth Hub</Link>.
       </p>
 
-      <div className="bounty-panel mt-6 rounded-2xl p-5">
-        <div className="mb-4 space-y-2">
+      <div className="bounty-panel relative mt-6 rounded-2xl p-5">
+        <ActiveBoardBackdrop density="low" />
+        <div className="relative z-10 mb-4 space-y-2">
           <label htmlFor="series" className="text-xs uppercase tracking-[0.16em] text-zinc-400">Series</label>
           <select
             id="series"
@@ -105,7 +107,7 @@ export default function CommitPage() {
           </p>
         </div>
 
-        <div className="flex flex-col gap-3 md:flex-row md:items-center">
+        <div className="relative z-10 flex flex-col gap-3 md:flex-row md:items-center">
           <input
             value={wifInput}
             onChange={(e) => setWifInput(e.target.value)}
@@ -117,7 +119,7 @@ export default function CommitPage() {
             {loading ? 'Committing...' : `Lock Bounty Pack (${(Number(SERIES_OPTIONS.find((s) => s.value === series)?.priceSats || 0) / 1e8).toFixed(8)} BCH)`}
           </Button>
         </div>
-        <p className="mt-3 text-xs text-zinc-400">
+        <p className="relative z-10 mt-3 text-xs text-zinc-400">
           {connectedAddress || 'No wallet connected on this browser yet.'}
         </p>
       </div>

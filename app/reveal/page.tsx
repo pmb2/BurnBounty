@@ -9,6 +9,7 @@ import { Card } from '@/components/Card';
 import { Button } from '@/components/ui/button';
 import { PackReveal3D } from '@/components/PackReveal3D';
 import { MagicParticles } from '@/components/MagicParticles';
+import { ActiveBoardBackdrop } from '@/components/ActiveBoardBackdrop';
 import type { RevealPackResult } from '@/types/cards';
 
 export default function RevealPage() {
@@ -79,8 +80,11 @@ export default function RevealPage() {
     <main className="relative mx-auto max-w-6xl px-6 py-10">
       <MagicParticles />
       <div className="bounty-board-bg relative mb-6 rounded-3xl px-6 py-7">
-        <h1 className="text-3xl font-bold">Reveal Bounty List</h1>
-        <p className="text-zinc-300">Step 2 of 2: reveal seed + nonce and unlock your 5 wanted cards.</p>
+        <ActiveBoardBackdrop density="medium" />
+        <div className="relative z-10">
+          <h1 className="text-3xl font-bold">Reveal Bounty List</h1>
+          <p className="text-zinc-300">Step 2 of 2: reveal seed + nonce and unlock your 5 wanted cards.</p>
+        </div>
       </div>
 
       <PackReveal3D cards={cards} revealed={!!result} />

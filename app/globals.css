@@ -72,3 +72,27 @@ body {
     opacity: 0;
   }
 }
+
+.active-board-line {
+  opacity: 0;
+  animation-name: board-scan;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes board-scan {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.45;
+  }
+  60% {
+    opacity: 0.12;
+  }
+  100% {
+    transform: translateY(110%);
+    opacity: 0;
+  }
+}
