@@ -94,6 +94,10 @@ Format inspired by Keep a Changelog and semantic versioning.
 - Supabase integration helpers with local fallback
 
 ### Fixed
+- legacy card compatibility for redemption:
+  - `/api/redeem` now accepts pre-v0.6 card payloads and backfills decay/cap metadata deterministically
+  - armory now normalizes older locally stored cards so they display drift/cap data and remain burnable
+  - redemption path now normalizes card payloads server-side before payout math/contract invocation
 - challenge lifecycle now enforces purpose/domain/nonce integrity via parser validation
 - wallet binding compares canonical BCH address keys instead of raw strings
 - signature verification logic moved out of route handlers into dedicated primitives

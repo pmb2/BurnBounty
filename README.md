@@ -94,6 +94,12 @@ payout = faceValue * 0.80 * multiplier
 
 - `PrizePool.cash` includes pro-rata payout logic when available reserve is below requested total.
 
+### Legacy Card Backfill (Retroactive Compatibility)
+
+- Cards minted before drift/cap encoding are normalized at redemption time.
+- Burn flow now deterministically derives missing `weeklyDriftMilli`, `randomCapWeeks`, and fallback `mintBlockHeight` from card entropy + tier.
+- Result: previously minted cards remain burnable and participate in decay/growth math without manual re-minting.
+
 ### In-Game Guide
 
 - New **Bounty Hunter Handbook** modal explains decay, cap windows, floor, series perks, and quick math.

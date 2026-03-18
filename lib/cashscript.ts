@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { CARD_TEMPLATES } from '@/data/cards';
-import { encodeCommitment, satsToBch } from '@/lib/cards';
+import { encodeCommitment, normalizeCardAsset, satsToBch } from '@/lib/cards';
 import { BLOCKS_PER_WEEK, commitmentFromSeed, FLOOR_MULTIPLIER_MILLI, ODDS, SERIES_CONFIG } from '@/lib/rng';
 import { verifyBatchCardGeneration, verifyCardGeneration } from '@/lib/verify';
 import type { CardAsset, CommitPackResult, PackSeries, PendingPack, RevealPackResult } from '@/types/cards';
@@ -238,9 +238,10 @@ export function revealBatchLocally(inputs: Array<{
 
 export async function redeemCardOnChipnet(userWif: string, card: CardAsset) {
   if (ENABLE_CHAIN_CALLS && !PRIZE_POOL_PKH) throw new Error('Missing PRIZE_POOL_PKH');
+  const normalizedCard = normalizeCardAsset(card);
 
-  const multiplierMilli = currentMultiplierMilli(card, MOCK_CHAIN_HEIGHT);
-  const adjustedFaceValue = Math.floor((card.originalFaceValueSats * multiplierMilli) / 1000);
+  const multiplierMilli = currentMultiplierMilli(normalizedCard, MOCK_CHAIN_HEIGHT);
+  const adjustedFaceValue = Math.floor((normalizedCard.originalFaceValueSats * multiplierMilli) / 1000);
   const payout = Math.floor(adjustedFaceValue * 0.8);
   const houseCut = adjustedFaceValue - payout;
 
@@ -257,7 +258,19 @@ export async function redeemCardOnChipnet(userWif: string, card: CardAsset) {
       const contract = new Contract(artifact, [PRIZE_POOL_PKH], { provider });
       const signer = new SignatureTemplate(userWif);
       const poolAddress = bitcore.Address.fromPublicKeyHash(Buffer.from(PRIZE_POOL_PKH, 'hex'), bitcore.Networks.testnet).toString();
-      const tx = await contract.unlock.redeem(userPk, signer, payout, houseCut, card.weeklyDriftMilli, card.randomCapWeeks, card.mintBlockHeight).to(userAddr, payout).to(poolAddress, houseCut).send();
+      const tx = await contract.unlock
+        .redeem(
+          userPk,
+          signer,
+          payout,
+          houseCut,
+          normalizedCard.weeklyDriftMilli,
+          normalizedCard.randomCapWeeks,
+          normalizedCard.mintBlockHeight
+        )
+        .to(userAddr, payout)
+        .to(poolAddress, houseCut)
+        .send();
       txid = typeof tx === 'string' ? tx : tx.txid;
     } catch {
       // Offline fallback.

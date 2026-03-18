@@ -9,6 +9,7 @@ import { BountyWorldScene } from '@/components/BountyWorldScene';
 import { Card } from '@/components/Card';
 import { ImmersiveAssetStatus } from '@/components/ImmersiveAssetStatus';
 import { Button } from '@/components/ui/button';
+import { normalizeCardAsset } from '@/lib/cards';
 import type { CardAsset } from '@/types/cards';
 
 type ArmoryTab = 'inventory' | 'market' | 'ledger';
@@ -60,8 +61,13 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
 
   useEffect(() => {
     const raw = localStorage.getItem('burnbounty.collection');
-    const loadedCards = raw ? (JSON.parse(raw) as CardAsset[]) : [];
+    const loadedCards = raw
+      ? (JSON.parse(raw) as Array<Partial<CardAsset>>).map((entry) => normalizeCardAsset(entry))
+      : [];
     setCards(loadedCards);
+    if (raw) {
+      localStorage.setItem('burnbounty.collection', JSON.stringify(loadedCards));
+    }
     if (loadedCards.length) setSelectedCardId(loadedCards[0].nftId);
 
     setRedeemed(Number(localStorage.getItem('burnbounty.totalRedeemed') || '0'));
