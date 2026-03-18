@@ -10,6 +10,8 @@ artifacts/
 coverage/
 dist/
 *.tsbuildinfo
+.tmp/
+deploy/traefik/standalone/letsencrypt/
 
 # Environment and secrets
 .env

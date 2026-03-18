@@ -1,12 +1,16 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { deriveAddressFromWif } from '@/lib/wallet';
 import { Button } from './ui/button';
 
 export function WalletConnect() {
   const [wif, setWif] = useState('');
-  const [savedWif, setSavedWif] = useState(typeof window === 'undefined' ? '' : (localStorage.getItem('burnbounty.wif') || ''));
+  const [savedWif, setSavedWif] = useState('');
+
+  useEffect(() => {
+    setSavedWif(localStorage.getItem('burnbounty.wif') || '');
+  }, []);
   const address = useMemo(() => {
     if (!savedWif) return '';
     try {

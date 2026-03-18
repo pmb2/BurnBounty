@@ -1,0 +1,46 @@
+services:
+  traefik:
+    image: traefik:v3.3
+    container_name: traefik
+    restart: unless-stopped
+    command:
+      - --configFile=/etc/traefik/traefik.yml
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./letsencrypt:/letsencrypt
+    networks:
+      - traefik_proxy
+
+  burnbounty:
+    container_name: burnbounty-app
+    build:
+      context: ../../..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      ENABLE_CHAIN_CALLS: "false"
+      PACK_PRICE_SATS: "100000"
+      CHIPNET_ELECTRUM: chipnet.imaginary.cash:50004
+    networks:
+      - traefik_proxy
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik_proxy
+      - traefik.http.routers.burnbounty.rule=Host(`bb.backus.agency`)
+      - traefik.http.routers.burnbounty.entrypoints=websecure
+      - traefik.http.routers.burnbounty.tls=true
+      - traefik.http.routers.burnbounty.tls.certresolver=letsencrypt
+      - traefik.http.services.burnbounty.loadbalancer.server.port=3000
+      - traefik.http.routers.burnbounty-http.rule=Host(`bb.backus.agency`)
+      - traefik.http.routers.burnbounty-http.entrypoints=web
+      - traefik.http.routers.burnbounty-http.middlewares=burnbounty-https-redirect
+      - traefik.http.middlewares.burnbounty-https-redirect.redirectscheme.scheme=https
+
+networks:
+  traefik_proxy:
+    name: traefik_proxy

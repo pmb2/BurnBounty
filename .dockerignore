@@ -1,0 +1,11 @@
+node_modules
+.next
+.tmp
+.git
+.gitignore
+npm-debug.log*
+*.log
+.env*
+!.env.example
+docs
+private.template
