@@ -17,7 +17,9 @@
     "contracts:deploy": "tsx scripts/deploy.ts",
     "test:flow": "tsx scripts/test-flow.ts",
     "test:demo-flow": "tsx scripts/demo-showcase-flow.ts",
-    "gen:cards": "tsx scripts/generate-card-assets.ts"
+    "gen:cards": "tsx scripts/generate-card-assets.ts",
+    "live:up": "docker compose -f deploy/traefik/docker-compose.existing-traefik.yml --env-file deploy/traefik/.env.live up -d --build",
+    "live:down": "docker compose -f deploy/traefik/docker-compose.existing-traefik.yml --env-file deploy/traefik/.env.live down"
   },
   "dependencies": {
     "@cashscript/sdk": "npm:cashscript@^0.12.1",

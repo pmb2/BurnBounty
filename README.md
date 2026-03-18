@@ -10,11 +10,11 @@ A fully on-chain digital trading card pack system on **Bitcoin Cash** using nati
 
 **100% open source • Transparent RNG • Instant 80% cash-out • True collectibles**
 
-[![CI](https://github.com/pmb2/bch-collections/actions/workflows/ci.yml/badge.svg)](https://github.com/pmb2/bch-collections/actions/workflows/ci.yml)
+[![CI](https://github.com/pmb2/BurnBounty/actions/workflows/ci.yml/badge.svg)](https://github.com/pmb2/BurnBounty/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![BCH](https://img.shields.io/badge/Blockchain-Bitcoin_Cash-00B140.svg)](https://bitcoincash.org)
 [![CashTokens](https://img.shields.io/badge/Tokens-CashTokens-blue)](https://cashscript.org)
-[![Chipnet POC](https://img.shields.io/badge/Status-Working_POC_on_Chipnet-green)](https://github.com/pmb2/bch-collections)
+[![Chipnet POC](https://img.shields.io/badge/Status-Working_POC_on_Chipnet-green)](https://github.com/pmb2/BurnBounty)
 
 </div>
 
@@ -95,8 +95,8 @@ Current status: **working on chipnet/testnet POC**.
 1. Clone:
 
 ```bash
-git clone https://github.com/pmb2/bch-collections.git
-cd bch-collections
+git clone https://github.com/pmb2/BurnBounty.git
+cd BurnBounty
 ```
 
 2. Install and run:
@@ -136,6 +136,31 @@ TEST_USER_WIF=<chipnet_wif> npm run test:demo-flow
 
 ---
 
+## Dev vs Live Environments
+
+- **Dev**: local machine with `.env.local` (from `.env.development.example`)
+- **Live**: `https://bb.backus.agency` with `deploy/traefik/.env.live` (from `.env.live.example`)
+
+Local dev:
+
+```bash
+cp .env.development.example .env.local
+npm install
+npm run dev
+```
+
+Live deployment (Traefik):
+
+```bash
+cp .env.live.example deploy/traefik/.env.live
+# edit live values
+npm run live:up
+```
+
+Live deploy is also VCS-driven via GitHub Actions on push to `main`.
+
+---
+
 ## Legal & Disclaimer
 
 This is a **collectible NFT project** with utility mechanics.
@@ -171,6 +196,7 @@ See:
 - [API Specifications](./docs/api.md)
 - [Frontend Flow](./docs/frontend.md)
 - [Deployment Guide](./docs/deployment.md)
+- [VCS + Deploy Flow](./docs/vcs-deploy-flow.md)
 - [Verification Guide](./docs/verification.md)
 - [Runbooks](./docs/runbooks/operations.md)
 - [Open Source Boundary](./docs/open-source-boundary.md)

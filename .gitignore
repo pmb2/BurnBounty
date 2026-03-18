@@ -19,6 +19,8 @@ deploy/traefik/standalone/letsencrypt/
 .env.*.local
 .env.production
 .env.staging
+.env.live
+deploy/traefik/.env.live
 
 # Private/internal materials (not open-source)
 private/

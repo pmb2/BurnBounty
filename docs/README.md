@@ -32,6 +32,7 @@ Out of scope (for this POC):
 - [API Specifications](./api.md)
 - [Frontend Flow](./frontend.md)
 - [Deployment Guide](./deployment.md)
+- [VCS + Deploy Flow](./vcs-deploy-flow.md)
 - [Testnet Wallet Setup](./testnet-wallet-setup.md)
 - [Verification Guide](./verification.md)
 - [Operations Runbook](./runbooks/operations.md)

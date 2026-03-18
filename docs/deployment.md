@@ -6,6 +6,13 @@
 - chipnet funds
 - configured `.env.local`
 
+## Environment Separation
+
+- Local dev uses `.env.local` (from `.env.development.example`)
+- Live uses `deploy/traefik/.env.live` (from `.env.live.example`)
+
+Never copy live secrets into local env files.
+
 ## Environment Variables
 
 From `.env.example`:
@@ -46,6 +53,14 @@ This outputs:
 ## Run App
 
 ```bash
+npm run dev
+```
+
+## Local Dev Bootstrap
+
+```bash
+cp .env.development.example .env.local
+npm install
 npm run dev
 ```
 
@@ -92,7 +107,9 @@ docker network create traefik_proxy
 4. Deploy BurnBounty behind Traefik:
 
 ```bash
-docker compose -f deploy/traefik/docker-compose.existing-traefik.yml up -d --build
+cp .env.live.example deploy/traefik/.env.live
+# edit deploy/traefik/.env.live values
+npm run live:up
 ```
 
 Traefik will issue/manage the TLS certificate and route HTTPS traffic to port `3000` in the app container.
@@ -123,3 +140,24 @@ curl -I https://bb.backus.agency
 ```
 
 Expected: HTTP 200 from BurnBounty over TLS with a valid Let’s Encrypt cert.
+
+## VCS-Driven Deploy (GitHub Actions)
+
+Workflow file: `.github/workflows/deploy-live.yml`
+
+Trigger:
+
+- push to `main`
+- manual dispatch
+
+Required secrets:
+
+- `LIVE_HOST`
+- `LIVE_USER`
+- `LIVE_SSH_KEY`
+- `LIVE_REPO_PATH`
+- optional `LIVE_SSH_PORT`
+
+Deployment script used on host:
+
+- `scripts/deploy-live.sh`
