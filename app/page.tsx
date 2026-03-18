@@ -2,13 +2,12 @@ import Link from 'next/link';
 import { PackOpeningAnimation } from '@/components/PackOpeningAnimation';
 import { Button } from '@/components/ui/button';
 import { GameGuideModal } from '@/components/GameGuideModal';
-import { WalletAuthPanel } from '@/components/WalletAuthPanel';
 
 export default function HomePage() {
   return (
-    <main className="mx-auto max-w-6xl px-6 py-14">
+    <main className="mx-auto max-w-6xl px-6 py-10">
       <GameGuideModal variant="floating-home" />
-      <section className="grid items-center gap-12 md:grid-cols-2">
+      <section className="bounty-board-bg grid items-center gap-12 rounded-3xl px-6 py-8 md:grid-cols-2 md:px-8">
         <div className="space-y-6">
           <p className="inline-block rounded-full border border-border px-3 py-1 text-xs uppercase tracking-[0.22em] text-orange-300">
             Bounty Hunters Of The Cash Frontier
@@ -19,19 +18,35 @@ export default function HomePage() {
             turn in any card for an instant 80% BCH reward.
           </p>
           <div className="flex flex-wrap gap-3">
-            <Link href="/commit"><Button size="lg">Commit Pack</Button></Link>
-            <Link href="/reveal"><Button variant="outline" size="lg">Reveal Bounties</Button></Link>
+            <Link href="/auth?mode=embedded&next=/commit"><Button size="lg">Start Playing</Button></Link>
+            <Link href="/auth?mode=external&next=/commit"><Button variant="outline" size="lg">I Have A BCH Wallet</Button></Link>
           </div>
+          <p className="text-sm text-zinc-400">
+            New players: quick-start uses an embedded wallet. Power users can bring an external BCH wallet.
+          </p>
         </div>
         <PackOpeningAnimation />
       </section>
 
-      <section className="mt-10">
-        <h2 className="text-xl font-bold">Get Started: Hybrid Wallet Auth</h2>
-        <p className="mb-4 mt-1 text-zinc-300">
-          Embedded wallet onboarding is the default path for fastest activation. External BCH wallet signature login is available for self-custody users. MetaMask Snap is optional and experimental.
-        </p>
-        <WalletAuthPanel />
+      <section className="bounty-panel mt-8 rounded-2xl p-6">
+        <h2 className="text-xl font-bold">First Pack In 3 Steps</h2>
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <div className="bounty-paper rounded-xl p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-emerald-200">Step 1</p>
+            <p className="mt-1 font-semibold">Create Hunter Access</p>
+            <p className="mt-1 text-sm text-zinc-300">Use embedded wallet quick-start or connect your own BCH wallet.</p>
+          </div>
+          <div className="bounty-paper rounded-xl p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-amber-200">Step 2</p>
+            <p className="mt-1 font-semibold">Commit Pack</p>
+            <p className="mt-1 text-sm text-zinc-300">Lock your bounty drop using a one-time commit transaction.</p>
+          </div>
+          <div className="bounty-paper rounded-xl p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-cyan-200">Step 3</p>
+            <p className="mt-1 font-semibold">Reveal & Claim</p>
+            <p className="mt-1 text-sm text-zinc-300">Reveal cards, keep rares, or burn for instant BCH payout.</p>
+          </div>
+        </div>
       </section>
     </main>
   );

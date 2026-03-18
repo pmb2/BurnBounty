@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { createEmbeddedWalletForUser, signWithEmbeddedWallet } from '@/lib/auth/embedded-wallet';
-import { WALLET_PROVIDER_DEFINITIONS } from '@/lib/auth/providers';
 import type { WalletRecord } from '@/types/auth';
 
 declare global {
@@ -21,6 +21,11 @@ type MeResponse = {
   user: { id: string; profile?: { displayName?: string } };
   wallets: WalletRecord[];
   primaryWallet?: WalletRecord | null;
+};
+
+type WalletAuthPanelProps = {
+  defaultMode?: 'embedded' | 'external' | 'snap';
+  nextPath?: string;
 };
 
 async function fetchMe(): Promise<MeResponse | null> {
@@ -40,8 +45,10 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
   return json as T;
 }
 
-export function WalletAuthPanel() {
-  const [activeTab, setActiveTab] = useState<'embedded' | 'external' | 'snap'>('embedded');
+export function WalletAuthPanel({ defaultMode = 'embedded', nextPath = '/commit' }: WalletAuthPanelProps) {
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<'embedded' | 'external' | 'snap'>(defaultMode);
+  const [showAdvanced, setShowAdvanced] = useState(defaultMode !== 'embedded');
   const [session, setSession] = useState<MeResponse | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -58,8 +65,6 @@ export function WalletAuthPanel() {
 
   const [snapAddress, setSnapAddress] = useState('');
 
-  const providerCards = useMemo(() => WALLET_PROVIDER_DEFINITIONS, []);
-
   async function refreshSession() {
     const me = await fetchMe();
     setSession(me);
@@ -68,6 +73,15 @@ export function WalletAuthPanel() {
   useEffect(() => {
     refreshSession().catch(() => setSession(null));
   }, []);
+
+  useEffect(() => {
+    setActiveTab(defaultMode);
+    setShowAdvanced(defaultMode !== 'embedded');
+  }, [defaultMode]);
+
+  function goNext() {
+    if (nextPath) router.push(nextPath);
+  }
 
   async function registerEmbedded() {
     setLoading(true);
@@ -85,6 +99,7 @@ export function WalletAuthPanel() {
       });
       toast.success('Embedded wallet created', { description: 'Quick-start account is ready.' });
       await refreshSession();
+      goNext();
     } catch (err: any) {
       toast.error('Embedded registration failed', { description: err.message || 'Unknown error' });
     } finally {
@@ -98,6 +113,7 @@ export function WalletAuthPanel() {
       await postJson('/api/auth/login', { username, passphrase });
       toast.success('Signed in', { description: 'Embedded wallet account authenticated.' });
       await refreshSession();
+      goNext();
     } catch (err: any) {
       toast.error('Embedded login failed', { description: err.message || 'Unknown error' });
     } finally {
@@ -142,6 +158,9 @@ export function WalletAuthPanel() {
       setSignature('');
       toast.success(challengePurpose === 'link_wallet' ? 'Wallet linked' : 'External wallet authenticated');
       await refreshSession();
+      if (challengePurpose !== 'link_wallet' && challengePurpose !== 'verify_wallet') {
+        goNext();
+      }
     } catch (err: any) {
       toast.error('Verification failed', { description: err.message || 'Unknown error' });
     } finally {
@@ -201,6 +220,7 @@ export function WalletAuthPanel() {
       });
       toast.success('MetaMask Snap auth complete', { description: 'Experimental provider accepted.' });
       await refreshSession();
+      goNext();
     } catch (err: any) {
       toast.error('Snap authentication failed', { description: err.message || 'Unknown error' });
     } finally {
@@ -228,17 +248,11 @@ export function WalletAuthPanel() {
 
   return (
     <div className="space-y-4 rounded-2xl border border-border bg-card p-5">
-      <div className="grid gap-2 md:grid-cols-3">
-        {providerCards.map((p) => (
-          <button
-            key={p.id}
-            onClick={() => setActiveTab(p.id === 'external_bch' ? 'external' : p.id === 'metamask_snap' ? 'snap' : 'embedded')}
-            className={`rounded-lg border px-3 py-2 text-left text-sm ${p.authPriority === 'primary' ? 'border-green-500/50' : p.authPriority === 'experimental' ? 'border-amber-500/50' : 'border-border'}`}
-          >
-            <p className="font-semibold">{p.name}</p>
-            <p className="text-xs text-zinc-400">{p.description}</p>
-          </button>
-        ))}
+      <div className="rounded-xl border border-emerald-500/35 bg-emerald-500/10 p-3">
+        <p className="text-sm font-semibold text-emerald-100">Recommended: Quick Start Embedded Wallet</p>
+        <p className="mt-1 text-xs text-zinc-200">
+          New players can create an account and encrypted local BCH wallet in under a minute. No external wallet setup required.
+        </p>
       </div>
 
       {session?.ok && (
@@ -263,56 +277,79 @@ export function WalletAuthPanel() {
         </div>
       )}
 
-      {activeTab === 'embedded' && (
-        <div className="space-y-3 rounded-xl border border-green-500/20 bg-green-500/5 p-3">
-          <p className="text-sm font-semibold">Quick Start (Recommended): Embedded Wallet</p>
-          <p className="text-xs text-zinc-300">Create an account and encrypted local BCH wallet in one step. Best for new players.</p>
-          <div className="grid gap-2 md:grid-cols-3">
-            <input value={username} onChange={(e) => setUsername(e.target.value)} className="rounded border border-border bg-transparent px-2 py-2 text-sm" placeholder="username" />
-            <input value={passphrase} onChange={(e) => setPassphrase(e.target.value)} type="password" className="rounded border border-border bg-transparent px-2 py-2 text-sm" placeholder="passphrase" />
-            <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="rounded border border-border bg-transparent px-2 py-2 text-sm" placeholder="display name (optional)" />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={registerEmbedded} disabled={loading}>Create Embedded Account</Button>
-            <Button variant="outline" onClick={loginEmbedded} disabled={loading}>Login with Embedded Account</Button>
-          </div>
+      <div className="space-y-3 rounded-xl border border-green-500/20 bg-green-500/5 p-3">
+        <p className="text-sm font-semibold">Create or Access Embedded Hunter Account</p>
+        <p className="text-xs text-zinc-300">This signs an auth challenge only. It does not broadcast a BCH transaction.</p>
+        <div className="grid gap-2 md:grid-cols-3">
+          <input value={username} onChange={(e) => setUsername(e.target.value)} className="rounded border border-border bg-transparent px-2 py-2 text-sm" placeholder="username" />
+          <input value={passphrase} onChange={(e) => setPassphrase(e.target.value)} type="password" className="rounded border border-border bg-transparent px-2 py-2 text-sm" placeholder="passphrase" />
+          <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="rounded border border-border bg-transparent px-2 py-2 text-sm" placeholder="display name (optional)" />
         </div>
-      )}
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={registerEmbedded} disabled={loading}>Create Embedded Account</Button>
+          <Button variant="outline" onClick={loginEmbedded} disabled={loading}>Login with Embedded Account</Button>
+        </div>
+      </div>
 
-      {activeTab === 'external' && (
-        <div className="space-y-3 rounded-xl border border-border p-3">
-          <p className="text-sm font-semibold">External BCH Wallet (Advanced / Power User)</p>
-          <p className="text-xs text-zinc-300">Bring your own wallet. Sign a one-time challenge to authenticate non-custodially.</p>
-          <div className="grid gap-2 md:grid-cols-3">
-            <select value={externalMode} onChange={(e) => setExternalMode(e.target.value as ExternalMode)} className="rounded border border-border bg-transparent px-2 py-2 text-sm">
-              <option value="electrum">Electron Cash (manual sign)</option>
-              <option value="paytaca">Paytaca (deep-link + paste signature)</option>
-            </select>
-            <input value={address} onChange={(e) => setAddress(e.target.value)} className="rounded border border-border bg-transparent px-2 py-2 text-sm md:col-span-2" placeholder="bitcoincash:... or bchtest:..." />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={() => startExternalChallenge('login')} disabled={loading}>Create Login Challenge</Button>
-            <Button variant="outline" onClick={() => startExternalChallenge('register')} disabled={loading}>Register via Wallet</Button>
-          </div>
-          {!!challenge && (
-            <div className="space-y-2 rounded border border-amber-500/25 bg-black/25 p-2">
-              <p className="text-xs uppercase tracking-[0.16em] text-amber-300">Challenge</p>
-              <textarea readOnly value={challenge} className="h-24 w-full rounded border border-border bg-transparent p-2 text-xs" />
-              <input value={signature} onChange={(e) => setSignature(e.target.value)} className="w-full rounded border border-border bg-transparent px-2 py-2 text-sm" placeholder="Paste signature" />
-              <Button onClick={verifyExternalChallenge} disabled={loading || !challengeId || !signature}>Verify Signature</Button>
+      <div className="space-y-3 rounded-xl border border-border/70 bg-black/20 p-3">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm font-semibold">Advanced Wallet Options</p>
+          <Button variant="outline" size="sm" onClick={() => setShowAdvanced((s) => !s)}>
+            {showAdvanced ? 'Hide' : 'Show'}
+          </Button>
+        </div>
+        <p className="text-xs text-zinc-300">
+          External BCH wallet and MetaMask Snap are optional for power users. Embedded is the default path.
+        </p>
+
+        {showAdvanced && (
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <Button variant={activeTab === 'external' ? 'default' : 'outline'} size="sm" onClick={() => setActiveTab('external')}>
+                External BCH
+              </Button>
+              <Button variant={activeTab === 'snap' ? 'default' : 'outline'} size="sm" onClick={() => setActiveTab('snap')}>
+                MetaMask Snap
+              </Button>
             </div>
-          )}
-        </div>
-      )}
 
-      {activeTab === 'snap' && (
-        <div className="space-y-3 rounded-xl border border-amber-500/25 bg-amber-500/5 p-3">
-          <p className="text-sm font-semibold">MetaMask Snap (Experimental / Optional)</p>
-          <p className="text-xs text-zinc-300">This is not BurnBounty’s primary BCH auth path. Use only if you explicitly want a MetaMask-based bridge flow.</p>
-          <input value={snapAddress} onChange={(e) => setSnapAddress(e.target.value)} className="w-full rounded border border-border bg-transparent px-2 py-2 text-sm" placeholder="0x... (optional, defaults to active account)" />
-          <Button variant="outline" onClick={loginWithSnap} disabled={loading}>Connect MetaMask Snap</Button>
-        </div>
-      )}
+            {activeTab === 'external' && (
+              <div className="space-y-3 rounded-xl border border-border p-3">
+                <p className="text-sm font-semibold">External BCH Wallet (Advanced / Power User)</p>
+                <p className="text-xs text-zinc-300">Sign a one-time challenge for authentication. Signing this challenge does not send BCH.</p>
+                <div className="grid gap-2 md:grid-cols-3">
+                  <select value={externalMode} onChange={(e) => setExternalMode(e.target.value as ExternalMode)} className="rounded border border-border bg-transparent px-2 py-2 text-sm">
+                    <option value="electrum">Electron Cash (manual sign)</option>
+                    <option value="paytaca">Paytaca (deep-link + paste signature)</option>
+                  </select>
+                  <input value={address} onChange={(e) => setAddress(e.target.value)} className="rounded border border-border bg-transparent px-2 py-2 text-sm md:col-span-2" placeholder="bitcoincash:... or bchtest:..." />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={() => startExternalChallenge('login')} disabled={loading}>Create Login Challenge</Button>
+                  <Button variant="outline" onClick={() => startExternalChallenge('register')} disabled={loading}>Register via Wallet</Button>
+                </div>
+                {!!challenge && (
+                  <div className="space-y-2 rounded border border-amber-500/25 bg-black/25 p-2">
+                    <p className="text-xs uppercase tracking-[0.16em] text-amber-300">Challenge</p>
+                    <textarea readOnly value={challenge} className="h-24 w-full rounded border border-border bg-transparent p-2 text-xs" />
+                    <input value={signature} onChange={(e) => setSignature(e.target.value)} className="w-full rounded border border-border bg-transparent px-2 py-2 text-sm" placeholder="Paste signature" />
+                    <Button onClick={verifyExternalChallenge} disabled={loading || !challengeId || !signature}>Verify Signature</Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'snap' && (
+              <div className="space-y-3 rounded-xl border border-amber-500/25 bg-amber-500/5 p-3">
+                <p className="text-sm font-semibold">MetaMask Snap (Experimental / Optional)</p>
+                <p className="text-xs text-zinc-300">Not the primary BCH auth path. Use only if you explicitly want a MetaMask-based bridge flow.</p>
+                <input value={snapAddress} onChange={(e) => setSnapAddress(e.target.value)} className="w-full rounded border border-border bg-transparent px-2 py-2 text-sm" placeholder="0x... (optional, defaults to active account)" />
+                <Button variant="outline" onClick={loginWithSnap} disabled={loading}>Connect MetaMask Snap</Button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

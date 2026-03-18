@@ -78,7 +78,7 @@ export default function RevealPage() {
   return (
     <main className="relative mx-auto max-w-6xl px-6 py-10">
       <MagicParticles />
-      <div className="relative mb-6">
+      <div className="bounty-board-bg relative mb-6 rounded-3xl px-6 py-7">
         <h1 className="text-3xl font-bold">Reveal Bounty List</h1>
         <p className="text-zinc-300">Step 2 of 2: reveal seed + nonce and unlock your 5 wanted cards.</p>
       </div>
@@ -86,11 +86,11 @@ export default function RevealPage() {
       <PackReveal3D cards={cards} revealed={!!result} />
 
       {!stash && !result && (
-        <div className="mt-4 rounded-2xl border border-border bg-card p-5 text-zinc-300">No pending commit found. Start at /commit.</div>
+        <div className="bounty-panel mt-4 rounded-2xl p-5 text-zinc-300">No pending commit found. Start at /commit.</div>
       )}
 
       {stash && !result && (
-        <div className="mt-4 rounded-2xl border border-border bg-card p-5">
+        <div className="bounty-panel mt-4 rounded-2xl p-5">
           <p className="text-sm text-zinc-300">Commit txid: {stash.pending.commitTxid}</p>
           <p className="text-sm text-zinc-300">Commitment hash: {stash.pending.commitmentHash}</p>
           <p className="text-sm text-zinc-300">Series: {stash.pending.series} • Pack price: {(stash.pending.packPriceSats / 1e8).toFixed(8)} BCH</p>
@@ -100,7 +100,7 @@ export default function RevealPage() {
 
       {result && (
         <div ref={revealContainerRef} className="mt-6">
-          <div className="rounded-2xl border border-cyan-300/30 bg-card/90 p-5 text-xs text-zinc-300 backdrop-blur">
+          <div className="bounty-paper rounded-2xl p-5 text-xs text-zinc-300 backdrop-blur">
             <p>Reveal txid: {result.revealTxid}</p>
             <p>Entropy root: {result.entropyRoot}</p>
             <p>Seed reveal: {result.seedReveal.userSeed} | nonce: {result.seedReveal.nonce}</p>

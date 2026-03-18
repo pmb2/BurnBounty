@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { isLikelyTestnetWif, maskWif } from '@/lib/wif';
@@ -82,8 +83,11 @@ export default function CommitPage() {
       <p className="mt-2 text-zinc-300">
         Step 1 of 2: lock your bounty drop by committing a private reveal seed hash.
       </p>
+      <p className="mt-1 text-xs text-zinc-400">
+        Need account access first? Use quick start from <Link className="text-emerald-300 underline" href="/auth?mode=embedded&next=/commit">Auth Hub</Link>.
+      </p>
 
-      <div className="mt-6 rounded-2xl border border-border bg-card p-5">
+      <div className="bounty-panel mt-6 rounded-2xl p-5">
         <div className="mb-4 space-y-2">
           <label htmlFor="series" className="text-xs uppercase tracking-[0.16em] text-zinc-400">Series</label>
           <select
@@ -119,7 +123,7 @@ export default function CommitPage() {
       </div>
 
       {pending && (
-        <div className="mt-6 rounded-2xl border border-border bg-card p-5 text-sm text-zinc-300">
+        <div className="bounty-paper mt-6 rounded-2xl p-5 text-sm text-zinc-300">
           <p>Commit txid: {pending.pending.commitTxid}</p>
           <p>Commitment hash: {pending.pending.commitmentHash}</p>
           <p>Reveal deadline: block {pending.pending.revealDeadline}</p>

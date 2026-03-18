@@ -15,8 +15,17 @@ Format inspired by Keep a Changelog and semantic versioning.
     - `docs/auth-production-signoff.md`
   - release command gate: `npm run release:auth-gate`
   - CI gate updates to run auth migration check and auth tests
+- UI/UX flow-audit report:
+  - `docs/ui-ux-flow-audit.md`
+  - onboarding friction map + next-pass priorities
 
 ### Changed
+- Home onboarding flow now prioritizes one dominant CTA (`Start Playing`) and defers advanced wallet methods.
+- Auth Hub now defaults to embedded onboarding and gates external/Snap under explicit advanced options.
+- Header wallet state now shows persistent auth status with wallet-type context; gameplay WIF input is collapsed.
+- Reveal flow now includes a no-WebGL fallback view so pack reveal remains usable on unsupported clients.
+- Navigation labels now reflect gameplay information hierarchy (`Play`, `Inventory`, `Market`, `Profile`).
+- Surface styling aligned to BurnBounty board/poster theme using new utility classes (`.bounty-board-bg`, `.bounty-panel`, `.bounty-paper`).
 - Legacy compatibility routes now emit explicit deprecation metadata/headers with sunset (`2026-06-30`):
   - `/api/auth/challenge`
   - `/api/auth/verify`

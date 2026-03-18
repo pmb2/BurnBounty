@@ -41,6 +41,7 @@ Auth subsystem status:
 - [Auth Release Checklist](./auth-release-checklist.md)
 - [Auth Operations](./auth-operations.md)
 - [Auth Production Signoff](./auth-production-signoff.md)
+- [UI/UX Flow Audit](./ui-ux-flow-audit.md)
 - [Contract Specifications](./contracts/specifications.md)
 - [RNG Design & Security](./rng.md)
 - [API Specifications](./api.md)
