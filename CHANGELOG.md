@@ -20,6 +20,7 @@ Format inspired by Keep a Changelog and semantic versioning.
   - onboarding friction map + next-pass priorities
 - immersive 3D world scaffolding and pipeline tooling:
   - `components/BountyWorldScene.tsx`
+  - `components/ImmersiveAssetStatus.tsx`
   - `data/3d-assets.json`
   - `scripts/validate-3d-assets.ts`
   - `docs/3d-asset-pipeline.md`
@@ -32,6 +33,8 @@ Format inspired by Keep a Changelog and semantic versioning.
 - legacy route wrappers now redirect:
   - `/commit`, `/reveal`, `/collection`, `/trading`, `/dashboard`
 - immersive surfaces upgraded with active telemetry board overlays and motion backdrops.
+- immersive scene now reads `data/3d-assets.json` slots and attempts runtime GLB loading with fallback primitives.
+- Play and Armory now include a live `Immersive Asset Ops` panel showing scene slot readiness (`Live`, `Missing file`, `Placeholder`).
 - Home onboarding flow now prioritizes one dominant CTA (`Start Playing`) and defers advanced wallet methods.
 - Auth Hub now defaults to embedded onboarding and gates external/Snap under explicit advanced options.
 - Header wallet state now shows persistent auth status with wallet-type context; gameplay WIF input is collapsed.

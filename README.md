@@ -198,6 +198,7 @@ TEST_USER_WIF=<chipnet_wif> npm run test:demo-flow
 BurnBounty now includes a staged 3D worlding path:
 
 - Runtime world scaffold: `components/BountyWorldScene.tsx`
+- Runtime readiness panel: `components/ImmersiveAssetStatus.tsx`
 - Asset manifest: `data/3d-assets.json`
 - Validation command:
 
@@ -212,6 +213,10 @@ npm run assets:3d:validate
 
 Detailed pipeline doc:
 - [`docs/3d-asset-pipeline.md`](./docs/3d-asset-pipeline.md)
+
+Runtime behavior:
+- Scene slots (`board`, `props`, `interactive`) are manifest-driven.
+- Missing or placeholder assets automatically fall back to synthetic primitives, so gameplay is never blocked.
 
 ---
 

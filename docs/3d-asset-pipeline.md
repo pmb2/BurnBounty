@@ -34,6 +34,8 @@ When `status=ready`, `file` must exist and pass size checks.
 ## Runtime Strategy
 - Current phase uses a synthetic 3D world scaffold (`components/BountyWorldScene.tsx`) so UX is already immersive.
 - Real GLB assets can replace primitives slot-by-slot without route refactors.
+- Slot targets are driven by `data/3d-assets.json` (`scene.board`, `scene.props`, `scene.interactive`).
+- The UI surfaces runtime status via `components/ImmersiveAssetStatus.tsx` inside Play/Armory.
 - Keep WebGL fallback behavior for low-end/unsupported clients.
 
 ## Suggested First Assets

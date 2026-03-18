@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { ActiveBoardBackdrop } from '@/components/ActiveBoardBackdrop';
 import { BountyWorldScene } from '@/components/BountyWorldScene';
 import { Card } from '@/components/Card';
+import { ImmersiveAssetStatus } from '@/components/ImmersiveAssetStatus';
 import { Button } from '@/components/ui/button';
 import type { CardAsset } from '@/types/cards';
 
@@ -196,8 +197,9 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
         </div>
       </section>
 
-      <section className="mb-6">
+      <section className="mb-6 grid gap-4 xl:grid-cols-[1fr_320px]">
         <BountyWorldScene />
+        <ImmersiveAssetStatus />
       </section>
 
       {tab === 'inventory' && (

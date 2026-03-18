@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { ActiveBoardBackdrop } from '@/components/ActiveBoardBackdrop';
 import { BountyWorldScene } from '@/components/BountyWorldScene';
 import { Card } from '@/components/Card';
+import { ImmersiveAssetStatus } from '@/components/ImmersiveAssetStatus';
 import { MagicParticles } from '@/components/MagicParticles';
 import { PackReveal3D } from '@/components/PackReveal3D';
 import { WalletAuthPanel } from '@/components/WalletAuthPanel';
@@ -230,8 +231,9 @@ export default function PlayClientPage({ initialStep }: PlayClientPageProps) {
         </div>
       </section>
 
-      <section className="mb-6">
+      <section className="mb-6 grid gap-4 xl:grid-cols-[1fr_320px]">
         <BountyWorldScene />
+        <ImmersiveAssetStatus />
       </section>
 
       {step === 'access' && (
