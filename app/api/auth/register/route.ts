@@ -28,7 +28,13 @@ export async function POST(req: NextRequest) {
       primaryAddress: result.primaryWallet?.address || null,
       authMethod: 'embedded_wallet'
     });
-    const res = NextResponse.json({ ok: true, user: result.user, wallets: result.wallets, embeddedPrimary: true });
+    const res = NextResponse.json({
+      ok: true,
+      user: result.user,
+      wallets: result.wallets,
+      primaryWallet: result.primaryWallet,
+      embeddedProvisioned: true
+    });
     res.cookies.set(sessionCookieName, token, {
       httpOnly: true,
       sameSite: 'lax',

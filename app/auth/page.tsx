@@ -10,7 +10,7 @@ type AuthPageProps = {
 
 export default function AuthPage({ searchParams }: AuthPageProps) {
   const mode = searchParams?.mode === 'external' || searchParams?.mode === 'snap' ? searchParams.mode : 'embedded';
-  const nextPath = searchParams?.next?.startsWith('/') ? searchParams.next : '/play';
+  const nextPath = searchParams?.next?.startsWith('/') ? searchParams.next : '/dashboard';
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-10">
@@ -19,7 +19,7 @@ export default function AuthPage({ searchParams }: AuthPageProps) {
         <div className="relative z-10">
           <h1 className="text-3xl font-bold">Hunter Access Hub</h1>
           <p className="mt-2 text-zinc-200">
-            Embedded wallet is the default path for fastest activation. External BCH wallet signature login is available for power users.
+            Sign in fast, then jump straight into the dashboard. Embedded wallets are auto-provisioned for every account.
           </p>
         </div>
       </div>

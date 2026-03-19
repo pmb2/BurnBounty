@@ -20,11 +20,11 @@ export default function HomePage() {
             turn in any card for an instant 80% BCH reward.
           </p>
           <div className="flex flex-wrap gap-3">
-            <Link href="/play"><Button size="lg">Start Playing</Button></Link>
-            <Link href="/auth?mode=external&next=/play"><Button variant="outline" size="lg">I Have A BCH Wallet</Button></Link>
+            <Link href="/auth?next=/dashboard"><Button size="lg">Play Now</Button></Link>
+            <Link href="/auth?mode=external&next=/dashboard"><Button variant="outline" size="lg">Use External BCH Wallet</Button></Link>
           </div>
           <p className="text-sm text-zinc-400">
-            New players: quick-start uses an embedded wallet. Power users can bring an external BCH wallet.
+            New players can sign in and play immediately. External wallet connection is available in advanced mode.
           </p>
         </div>
         <div className="relative z-10">
@@ -40,7 +40,7 @@ export default function HomePage() {
           <div className="bounty-paper rounded-xl p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-emerald-200">Step 1</p>
             <p className="mt-1 font-semibold">Create Hunter Access</p>
-            <p className="mt-1 text-sm text-zinc-300">Use embedded wallet quick-start or connect your own BCH wallet.</p>
+            <p className="mt-1 text-sm text-zinc-300">Sign in, enter dashboard, and start playing in one flow.</p>
           </div>
           <div className="bounty-paper rounded-xl p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-amber-200">Step 2</p>

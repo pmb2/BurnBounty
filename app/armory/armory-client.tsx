@@ -87,7 +87,6 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
   const [listingConfirmOpen, setListingConfirmOpen] = useState(false);
   const [creatingListing, setCreatingListing] = useState(false);
   const [buyConfirmListing, setBuyConfirmListing] = useState<MarketListing | null>(null);
-  const [gameplayWif, setGameplayWif] = useState('');
 
   const [redeemed, setRedeemed] = useState(0);
   const [house, setHouse] = useState(0);
@@ -111,7 +110,6 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
       .then((me) => setSession(me))
       .catch(() => setSession(null));
 
-    setGameplayWif(localStorage.getItem('burnbounty.wif') || '');
   }, []);
 
   useEffect(() => {
@@ -139,7 +137,7 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
 
   function setTab(nextTab: ArmoryTab) {
     setTabState(nextTab);
-    router.replace(`/armory?tab=${nextTab}`);
+    router.replace(`/dashboard?tab=${nextTab}`);
   }
 
   async function redeem(card: CardAsset) {
@@ -201,8 +199,6 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
       const sellerAddress = session?.primaryWallet?.address || session?.wallets?.[0]?.address;
       if (!sellerAddress) throw new Error('Primary wallet not available. Link a wallet in Auth Hub first.');
       if (!selectedCard) throw new Error('Selected card is no longer available.');
-      const signerWif = gameplayWif || localStorage.getItem('burnbounty.wif') || '';
-      if (!signerWif) throw new Error('Gameplay wallet key required. Connect Gameplay Key in Play tab first.');
       const priceSats = parsePriceToSats(price, priceUnit);
       if (!Number.isFinite(priceSats) || priceSats <= 0) throw new Error('Price must be a positive number.');
 
@@ -212,9 +208,10 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           seller_address: sellerAddress,
-          wallet_wif: signerWif,
           card_id: selectedCard.nftId,
           price_sats: priceSats,
+          token_category: selectedCard.categoryId,
+          token_commitment: selectedCard.commitmentHex,
           card_snapshot: {
             nftId: selectedCard.nftId,
             name: selectedCard.name,
@@ -223,7 +220,9 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
             faceValueSats: selectedCard.faceValueSats,
             weeklyDriftMilli: selectedCard.weeklyDriftMilli,
             randomCapWeeks: selectedCard.randomCapWeeks,
-            payoutSats: selectedCard.payoutSats
+            payoutSats: selectedCard.payoutSats,
+            tokenCategory: selectedCard.categoryId,
+            tokenCommitment: selectedCard.commitmentHex
           },
           note
         })
@@ -239,8 +238,8 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
         throw new Error(json.error || 'Create listing failed');
       }
       toast.success('Listing created');
-      toast.info('Chain intent committed', {
-        description: json.chainTxid ? `TxID ${json.chainTxid.slice(0, 20)}...` : 'Intent signed and stored.'
+      toast.info(json.chainCommitted ? 'Escrow listed on chipnet' : 'Listing intent recorded', {
+        description: json.chainTxid ? `TxID ${json.chainTxid.slice(0, 20)}...` : 'Listing recorded.'
       });
       setListingConfirmOpen(false);
       setNote('');
@@ -262,12 +261,10 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
       if (!buyerAddress) {
         throw new Error('Link a wallet in Auth Hub before buying.');
       }
-      const signerWif = gameplayWif || localStorage.getItem('burnbounty.wif') || '';
-      if (!signerWif) throw new Error('Gameplay wallet key required. Connect Gameplay Key in Play tab first.');
       const res = await fetch(`/api/trading/listings/${encodeURIComponent(listing.id)}/buy`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ buyer_address: buyerAddress, wallet_wif: signerWif })
+        body: JSON.stringify({ buyer_address: buyerAddress })
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Buy failed');
@@ -305,8 +302,8 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
       toast.success('Listing purchased', {
         description: `You bought ${formatBchFromSats(Number(listing.price_sats))}.`
       });
-      toast.info('Chain intent committed', {
-        description: json.chainTxid ? `TxID ${json.chainTxid.slice(0, 20)}...` : 'Intent signed and stored.'
+      toast.info(json.chainCommitted ? 'Purchase settled on chipnet' : 'Purchase intent recorded', {
+        description: json.chainTxid ? `TxID ${json.chainTxid.slice(0, 20)}...` : 'Purchase recorded.'
       });
       setBuyConfirmListing(null);
     } catch (err: any) {
@@ -319,12 +316,6 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
   function requestBuyListing(listing: MarketListing) {
     if (!session?.ok) {
       toast.error('Authentication required', { description: 'Sign in before buying listings.' });
-      return;
-    }
-    if (!gameplayWif && !localStorage.getItem('burnbounty.wif')) {
-      toast.error('Gameplay key missing', {
-        description: 'Enter your gameplay WIF below to sign the purchase intent.'
-      });
       return;
     }
     setBuyConfirmListing(listing);
@@ -424,7 +415,7 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
             </div>
             {sortedCards.length === 0 && (
               <div className="mt-4 rounded-xl border border-border/60 bg-black/30 p-4 text-sm text-zinc-300">
-                No cards in inventory yet. <Link className="text-emerald-300 underline" href="/play">Build a deck and queue matches.</Link>
+                No cards in inventory yet. <Link className="text-emerald-300 underline" href="/dashboard?tab=play">Build a deck and queue matches.</Link>
               </div>
             )}
           </div>
@@ -473,25 +464,6 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
                 <option value="bch" className="bg-[#111]">BCH</option>
               </select>
               <input value={note} onChange={(e) => setNote(e.target.value)} className="rounded border border-border bg-transparent px-3 py-2 text-sm" placeholder="Optional note" />
-            </div>
-            <div className="mt-3 rounded-lg border border-border/70 bg-black/20 p-3">
-              <label htmlFor="gameplay-wif" className="text-xs uppercase tracking-[0.14em] text-zinc-400">
-                Gameplay Wallet Key (Chipnet WIF)
-              </label>
-              <input
-                id="gameplay-wif"
-                value={gameplayWif}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  setGameplayWif(next);
-                  localStorage.setItem('burnbounty.wif', next);
-                }}
-                className="mt-2 w-full rounded border border-border bg-transparent px-3 py-2 text-sm"
-                placeholder="cV... / L... (demo only)"
-              />
-              <p className="mt-1 text-[11px] text-zinc-500">
-                Used for one-click market signing. This signs an intent and records a chain-linked commit marker.
-              </p>
             </div>
             <p className="mt-2 text-xs text-zinc-400">
               Listing preview:{' '}
@@ -547,7 +519,7 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
                           <p><span className="text-zinc-400">Seller:</span> {l.seller_address}</p>
                           {l.sale_txid && (
                             <p className="text-xs text-zinc-500">
-                              Sale commit: {shortAddress(l.sale_txid)}
+                              Escrow tx: {shortAddress(l.sale_txid)}
                             </p>
                           )}
                           {l.note && <p><span className="text-zinc-400">Note:</span> {l.note}</p>}

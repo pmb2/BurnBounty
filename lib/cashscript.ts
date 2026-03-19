@@ -28,9 +28,19 @@ async function deps() {
   return { cashscript, bitcore: bitcore.default || bitcore, sdk };
 }
 
-function loadArtifact(name: 'PackCommit' | 'PackReveal' | 'PrizePool' | 'CardRedeemer') {
+function loadArtifact(name: 'PackCommit' | 'PackReveal' | 'PrizePool' | 'CardRedeemer' | 'Escrow') {
   const p = path.join(process.cwd(), 'artifacts', `${name}.artifact.json`);
   return JSON.parse(readFileSync(p, 'utf8'));
+}
+
+function normalizeHex(hex: string) {
+  return hex.replace(/^0x/i, '').toLowerCase();
+}
+
+function toBigIntSats(value: bigint | number | string) {
+  if (typeof value === 'bigint') return value;
+  if (typeof value === 'number') return BigInt(Math.trunc(value));
+  return BigInt(value);
 }
 
 function mockBlockHash(offset = 0): string {
@@ -351,5 +361,163 @@ export async function commitMarketIntentOnChipnet(input: {
   }
 
   return { walletAddress, signature, txid, chainCommitted };
+}
+
+export async function escrowListCardOnChipnet(input: {
+  sellerWif: string;
+  sellerAddress?: string;
+  tokenCategory: string;
+  tokenCommitment: string;
+  priceSats: number;
+}) {
+  if (!ENABLE_CHAIN_CALLS) {
+    throw new Error('On-chain escrow listing requires ENABLE_CHAIN_CALLS=true.');
+  }
+
+  const { cashscript, bitcore } = await deps();
+  const { Contract, ElectrumNetworkProvider, SignatureTemplate, TransactionBuilder } = cashscript;
+  const provider = new ElectrumNetworkProvider('chipnet', CHIPNET_ELECTRUM);
+  const sellerKey = bitcore.PrivateKey.fromWIF(input.sellerWif);
+  const sellerAddress = input.sellerAddress || sellerKey.toAddress(bitcore.Networks.testnet).toString();
+  const sellerPkh = Buffer.from(bitcore.Address.fromString(sellerAddress).hashBuffer).toString('hex');
+  const tokenCategory = normalizeHex(input.tokenCategory);
+  const tokenCommitment = normalizeHex(input.tokenCommitment);
+
+  const escrowArtifact = loadArtifact('Escrow');
+  const escrowContract = new Contract(escrowArtifact, [sellerPkh, tokenCategory, tokenCommitment], { provider });
+  const signer = new SignatureTemplate(input.sellerWif);
+
+  const utxos = await provider.getUtxos(sellerAddress);
+  const nftUtxo = utxos.find(
+    (utxo: any) =>
+      utxo.token &&
+      normalizeHex(String(utxo.token.category || '')) === tokenCategory &&
+      normalizeHex(String(utxo.token.nft?.commitment || '')) === tokenCommitment
+  );
+  if (!nftUtxo) {
+    throw new Error('Seller token UTXO not found for this card. Ensure the NFT is on-chain in seller wallet.');
+  }
+
+  const spendableBch = utxos
+    .filter((utxo: any) => !utxo.token && !(utxo.txid === nftUtxo.txid && utxo.vout === nftUtxo.vout))
+    .sort((a: any, b: any) => (a.satoshis === b.satoshis ? 0 : a.satoshis > b.satoshis ? -1 : 1));
+
+  const selectedBch: any[] = [];
+  let totalIn = toBigIntSats(nftUtxo.satoshis);
+  const dust = 546n;
+  const estimateFee = (inputCount: number, outputCount: number) => BigInt(12 + inputCount * 148 + outputCount * 34 + 120);
+
+  while (totalIn - dust - estimateFee(1 + selectedBch.length, 2) < dust && spendableBch.length > selectedBch.length) {
+    const next = spendableBch[selectedBch.length];
+    selectedBch.push(next);
+    totalIn += toBigIntSats(next.satoshis);
+  }
+
+  const fee = estimateFee(1 + selectedBch.length, 2);
+  const change = totalIn - dust - fee;
+  if (change < dust) throw new Error('Insufficient BCH to escrow card and cover miner fee.');
+
+  const txBuilder = new TransactionBuilder({
+    provider,
+    maximumFeeSatoshis: 30_000n,
+    maximumFeeSatsPerByte: 4
+  });
+
+  txBuilder.addInput(nftUtxo, signer.unlockP2PKH());
+  if (selectedBch.length) txBuilder.addInputs(selectedBch, signer.unlockP2PKH());
+  txBuilder.addOutput({
+    to: escrowContract.address,
+    amount: dust,
+    token: nftUtxo.token
+  });
+  txBuilder.addOutput({ to: sellerAddress, amount: change });
+  const sent = await txBuilder.send();
+
+  return {
+    sellerAddress,
+    escrowAddress: escrowContract.address,
+    txid: sent.txid,
+    vout: 0,
+    tokenCategory,
+    tokenCommitment,
+    chainCommitted: true
+  };
+}
+
+export async function escrowBuyCardOnChipnet(input: {
+  buyerWif: string;
+  buyerAddress?: string;
+  sellerAddress: string;
+  priceSats: number;
+  tokenCategory: string;
+  tokenCommitment: string;
+  escrowTxid: string;
+  escrowVout: number;
+}) {
+  if (!ENABLE_CHAIN_CALLS) {
+    throw new Error('On-chain escrow settlement requires ENABLE_CHAIN_CALLS=true.');
+  }
+
+  const { cashscript, bitcore } = await deps();
+  const { Contract, ElectrumNetworkProvider, SignatureTemplate, TransactionBuilder } = cashscript;
+  const provider = new ElectrumNetworkProvider('chipnet', CHIPNET_ELECTRUM);
+
+  const buyerKey = bitcore.PrivateKey.fromWIF(input.buyerWif);
+  const buyerAddress = input.buyerAddress || buyerKey.toAddress(bitcore.Networks.testnet).toString();
+  const buyerPubHex = Buffer.from(buyerKey.toPublicKey().toBuffer()).toString('hex');
+
+  const sellerAddress = input.sellerAddress;
+  const tokenCategory = normalizeHex(input.tokenCategory);
+  const tokenCommitment = normalizeHex(input.tokenCommitment);
+  const sellerPkh = Buffer.from(bitcore.Address.fromString(sellerAddress).hashBuffer).toString('hex');
+
+  const escrowArtifact = loadArtifact('Escrow');
+  const escrowContract = new Contract(escrowArtifact, [sellerPkh, tokenCategory, tokenCommitment], { provider });
+  const escrowUtxos = await escrowContract.getUtxos();
+  const escrowUtxo = escrowUtxos.find((utxo: any) => utxo.txid === input.escrowTxid && Number(utxo.vout) === Number(input.escrowVout));
+  if (!escrowUtxo) {
+    throw new Error('Escrow UTXO not found. Listing may already be settled or canceled.');
+  }
+
+  const buyerSigner = new SignatureTemplate(input.buyerWif);
+  const buyerUtxos = (await provider.getUtxos(buyerAddress))
+    .filter((utxo: any) => !utxo.token)
+    .sort((a: any, b: any) => (a.satoshis === b.satoshis ? 0 : a.satoshis > b.satoshis ? -1 : 1));
+
+  const price = BigInt(input.priceSats);
+  const tokenOutSats = toBigIntSats(escrowUtxo.satoshis);
+  const selectedBuyerUtxos: any[] = [];
+  let totalBuyer = 0n;
+  const estimateFee = (inputCount: number, outputCount: number) => BigInt(12 + inputCount * 148 + outputCount * 34 + 120);
+  while (totalBuyer < price + estimateFee(1 + selectedBuyerUtxos.length, 3) && buyerUtxos.length > selectedBuyerUtxos.length) {
+    const next = buyerUtxos[selectedBuyerUtxos.length];
+    selectedBuyerUtxos.push(next);
+    totalBuyer += toBigIntSats(next.satoshis);
+  }
+
+  const fee = estimateFee(1 + selectedBuyerUtxos.length, 3);
+  const buyerChange = totalBuyer - price - fee;
+  if (buyerChange < 546n) throw new Error('Insufficient buyer balance to settle escrow listing.');
+
+  const txBuilder = new TransactionBuilder({
+    provider,
+    maximumFeeSatoshis: 50_000n,
+    maximumFeeSatsPerByte: 5
+  });
+
+  txBuilder.addInput(escrowUtxo, escrowContract.unlock.settle(buyerPubHex));
+  if (selectedBuyerUtxos.length) txBuilder.addInputs(selectedBuyerUtxos, buyerSigner.unlockP2PKH());
+
+  // Contract-enforced order.
+  txBuilder.addOutput({ to: sellerAddress, amount: price });
+  txBuilder.addOutput({ to: buyerAddress, amount: tokenOutSats, token: escrowUtxo.token });
+  txBuilder.addOutput({ to: buyerAddress, amount: buyerChange });
+  const sent = await txBuilder.send();
+
+  return {
+    buyerAddress,
+    txid: sent.txid,
+    chainCommitted: true
+  };
 }
 

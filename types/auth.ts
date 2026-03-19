@@ -2,6 +2,7 @@ export type AuthIdentityType =
   | 'embedded_wallet'
   | 'external_bch_wallet'
   | 'metamask_snap'
+  | 'google_oauth'
   | 'email'
   | 'guest'
   | 'device';
@@ -14,6 +15,8 @@ export type WalletSignMode = 'paytaca' | 'electrum' | 'manual' | 'metamask_snap'
 export interface UserProfile {
   displayName?: string;
   bio?: string;
+  avatarUrl?: string;
+  rankLabel?: string;
 }
 
 export interface User {

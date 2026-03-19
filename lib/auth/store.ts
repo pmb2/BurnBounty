@@ -21,6 +21,12 @@ function identityKey(type: AuthIdentityType, identifier: string) {
   return `${type}:${identifier.trim().toLowerCase()}`;
 }
 
+function isUniqueConstraintError(err: unknown): boolean {
+  const code = (err as any)?.code;
+  const message = String((err as any)?.message || '').toLowerCase();
+  return code === '23505' || message.includes('duplicate key value violates unique constraint');
+}
+
 function mapUser(row: any): User {
   return {
     id: row.id,
@@ -29,7 +35,9 @@ function mapUser(row: any): User {
     status: row.status,
     profile: {
       displayName: row.display_name || undefined,
-      bio: row.bio || undefined
+      bio: row.bio || undefined,
+      avatarUrl: row.avatar_url || undefined,
+      rankLabel: row.rank_label || 'Greenhorn'
     }
   };
 }
@@ -83,12 +91,53 @@ async function createUserTx(client: PoolClient, profileName?: string): Promise<U
   const displayName = profileName?.trim() || `Hunter-${Math.floor(1000 + Math.random() * 9000)}`;
   const { rows } = await client.query(
     `
-      insert into auth_users (display_name)
-      values ($1)
+      insert into auth_users (display_name, rank_label)
+      values ($1, 'Greenhorn')
       returning *
     `,
     [displayName]
   );
+  return mapUser(rows[0]);
+}
+
+export async function createUserProfile(input: {
+  displayName?: string;
+  avatarUrl?: string;
+  rankLabel?: string;
+}): Promise<User> {
+  const displayName = input.displayName?.trim() || `Hunter-${Math.floor(1000 + Math.random() * 9000)}`;
+  const avatarUrl = input.avatarUrl?.trim() || null;
+  const rankLabel = input.rankLabel?.trim() || 'Greenhorn';
+  const { rows } = await dbQuery(
+    `
+      insert into auth_users (display_name, avatar_url, rank_label)
+      values ($1, $2, $3)
+      returning *
+    `,
+    [displayName, avatarUrl, rankLabel]
+  );
+  return mapUser(rows[0]);
+}
+
+export async function updateUserProfile(input: {
+  userId: string;
+  displayName?: string;
+  avatarUrl?: string;
+  rankLabel?: string;
+}): Promise<User> {
+  const { rows } = await dbQuery(
+    `
+      update auth_users
+      set display_name = coalesce($2, display_name),
+          avatar_url = coalesce($3, avatar_url),
+          rank_label = coalesce($4, rank_label),
+          updated_at = now()
+      where id = $1
+      returning *
+    `,
+    [input.userId, input.displayName || null, input.avatarUrl || null, input.rankLabel || null]
+  );
+  if (!rows[0]) throw authError('auth_required', 'User not found');
   return mapUser(rows[0]);
 }
 
@@ -319,6 +368,83 @@ export async function getWalletsForUser(userId: string): Promise<WalletRecord[]>
   return rows.map(mapWallet);
 }
 
+export async function upsertWalletSecret(input: {
+  walletId: string;
+  scheme: string;
+  ciphertext: string;
+  iv: string;
+  authTag: string;
+  metadata?: Record<string, unknown>;
+}) {
+  await dbQuery(
+    `
+      insert into auth_wallet_secrets (
+        wallet_id, scheme, ciphertext, iv, auth_tag, metadata, updated_at
+      ) values ($1, $2, $3, $4, $5, $6::jsonb, now())
+      on conflict (wallet_id)
+      do update set
+        scheme = excluded.scheme,
+        ciphertext = excluded.ciphertext,
+        iv = excluded.iv,
+        auth_tag = excluded.auth_tag,
+        metadata = auth_wallet_secrets.metadata || excluded.metadata,
+        updated_at = now()
+    `,
+    [
+      input.walletId,
+      input.scheme,
+      input.ciphertext,
+      input.iv,
+      input.authTag,
+      JSON.stringify(input.metadata || {})
+    ]
+  );
+}
+
+export async function getWalletSecret(walletId: string): Promise<{
+  scheme: string;
+  ciphertext: string;
+  iv: string;
+  authTag: string;
+  metadata: Record<string, unknown>;
+} | null> {
+  const { rows } = await dbQuery(
+    `select scheme, ciphertext, iv, auth_tag, metadata from auth_wallet_secrets where wallet_id = $1 limit 1`,
+    [walletId]
+  );
+  if (!rows[0]) return null;
+  return {
+    scheme: rows[0].scheme,
+    ciphertext: rows[0].ciphertext,
+    iv: rows[0].iv,
+    authTag: rows[0].auth_tag,
+    metadata: rows[0].metadata || {}
+  };
+}
+
+export async function listRecentSessions(userId: string, limit = 12) {
+  const { rows } = await dbQuery(
+    `
+      select id, issued_at, last_seen_at, recent_auth_at, expires_at, revoked_at, revocation_reason, metadata
+      from auth_sessions
+      where user_id = $1
+      order by issued_at desc
+      limit $2
+    `,
+    [userId, Math.max(1, Math.min(limit, 50))]
+  );
+  return rows.map((row: any) => ({
+    id: row.id,
+    issuedAt: row.issued_at?.toISOString?.() || row.issued_at,
+    lastSeenAt: row.last_seen_at?.toISOString?.() || row.last_seen_at || null,
+    recentAuthAt: row.recent_auth_at?.toISOString?.() || row.recent_auth_at || null,
+    expiresAt: row.expires_at?.toISOString?.() || row.expires_at,
+    revokedAt: row.revoked_at?.toISOString?.() || row.revoked_at || null,
+    revocationReason: row.revocation_reason || null,
+    metadata: row.metadata || {}
+  }));
+}
+
 export async function setPrimaryWallet(userId: string, address: string) {
   const normalized = normalizeBchAddress(address);
   await dbTx(async (client) => setPrimaryWalletTx(client, userId, normalized.storageKey));
@@ -466,17 +592,29 @@ export async function bindExternalWalletLogin(input: {
   const existingOwner = await resolveUserFromExternalWallet(input.address);
   if (existingOwner) return withWallets(existingOwner.id);
 
-  const user = await dbTx(async (client) => {
-    const created = await createUserTx(client);
-    await client.query(
-      `
-        insert into auth_identities (user_id, type, identifier, identifier_normalized, verified_at, metadata)
-        values ($1, 'external_bch_wallet', $2, $3, now(), $4::jsonb)
-      `,
-      [created.id, input.address.trim(), identityKey('external_bch_wallet', input.address), JSON.stringify({ signMode: input.signMode })]
-    );
-    return created;
-  });
+  let user: User;
+  try {
+    user = await dbTx(async (client) => {
+      const created = await createUserTx(client);
+      await client.query(
+        `
+          insert into auth_identities (user_id, type, identifier, identifier_normalized, verified_at, metadata)
+          values ($1, 'external_bch_wallet', $2, $3, now(), $4::jsonb)
+        `,
+        [created.id, input.address.trim(), identityKey('external_bch_wallet', input.address), JSON.stringify({ signMode: input.signMode })]
+      );
+      return created;
+    });
+  } catch (err: any) {
+    if (isUniqueConstraintError(err)) {
+      const owner = await resolveUserFromExternalWallet(input.address);
+      if (owner) return withWallets(owner.id);
+
+      const existingIdentity = await findIdentity('external_bch_wallet', input.address);
+      if (existingIdentity) return withWallets(existingIdentity.userId);
+    }
+    throw err;
+  }
 
   try {
     await upsertWallet({

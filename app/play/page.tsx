@@ -1,5 +1,5 @@
-import PlayClientPage from './play-client';
+import { redirect } from 'next/navigation';
 
 export default function PlayPage() {
-  return <PlayClientPage />;
+  redirect('/dashboard?tab=play');
 }

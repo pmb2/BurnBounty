@@ -85,9 +85,11 @@ export async function dbTx<T>(fn: (client: PoolClient) => Promise<T>): Promise<T
 
 export async function resetDbForTests() {
   await withDb(async (client) => {
+    await client.query(`delete from market_listings`);
     await client.query(`delete from auth_rate_limit_counters`);
     await client.query(`delete from auth_audit_events`);
     await client.query(`delete from auth_sessions`);
+    await client.query(`delete from auth_wallet_secrets`);
     await client.query(`delete from auth_wallet_challenges`);
     await client.query(`delete from auth_wallets`);
     await client.query(`delete from auth_identities`);

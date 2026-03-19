@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
 export default function CommitRedirectPage() {
-  redirect('/play');
+  redirect('/dashboard?tab=play');
 }

@@ -10,6 +10,8 @@ import { authError } from '@/lib/auth/errors';
 import { recordAuthAuditEvent } from '@/lib/auth/audit';
 import { verifyWalletAuthSignature } from '@/lib/auth/verify';
 import {
+  createIdentity,
+  createUserProfile,
   bindExternalWalletLogin,
   consumeChallenge,
   ensureEmbeddedUser,
@@ -27,6 +29,7 @@ import {
 } from '@/lib/auth/store';
 import { markRecentSessionAuth } from '@/lib/auth/session';
 import { derivePassphraseDigest, isLegacySha256PassphraseDigest, verifyPassphraseDigest } from '@/lib/auth/passphrase';
+import { ensureManagedEmbeddedWalletForUser } from '@/lib/auth/embedded-custody';
 import type {
   AuthResult,
   SessionPayload,
@@ -38,11 +41,13 @@ import type {
 
 export async function registerEmbedded(input: { username: string; passphrase: string; displayName?: string }): Promise<AuthResult> {
   const passphraseHash = await derivePassphraseDigest(input.passphrase);
-  const result = await ensureEmbeddedUser({
+  const created = await ensureEmbeddedUser({
     username: input.username.trim().toLowerCase(),
     passphraseHash,
     displayName: input.displayName
   });
+  await ensureManagedEmbeddedWalletForUser(created.user.id, { source: 'embedded_register' });
+  const result = await withWallets(created.user.id);
   await recordAuthAuditEvent({
     eventType: 'embedded_wallet_created',
     outcome: 'success',
@@ -68,6 +73,7 @@ export async function loginEmbeddedUser(input: { username: string; passphrase: s
     });
   }
 
+  await ensureManagedEmbeddedWalletForUser(identity.userId, { source: 'embedded_login' });
   const result = await withWallets(identity.userId);
   await recordAuthAuditEvent({
     eventType: 'login_succeeded',
@@ -76,6 +82,67 @@ export async function loginEmbeddedUser(input: { username: string; passphrase: s
     metadata: { method: 'embedded_wallet' }
   });
   return result;
+}
+
+export async function loginWithGoogleOAuth(input: {
+  googleSub: string;
+  email: string;
+  name?: string;
+  picture?: string;
+}): Promise<AuthResult> {
+  const normalizedSub = input.googleSub.trim();
+  const normalizedEmail = input.email.trim().toLowerCase();
+
+  const existingGoogle = await findIdentity('google_oauth', normalizedSub);
+  if (existingGoogle) {
+    if (input.name || input.picture) {
+      await updateIdentityMetadata(existingGoogle.id, {
+        email: normalizedEmail,
+        name: input.name,
+        picture: input.picture,
+        lastLoginAt: new Date().toISOString()
+      });
+    }
+    await ensureManagedEmbeddedWalletForUser(existingGoogle.userId, { source: 'google_login_existing' });
+    return withWallets(existingGoogle.userId);
+  }
+
+  const existingEmail = await findIdentity('email', normalizedEmail);
+  let userId = existingEmail?.userId || null;
+
+  if (!userId) {
+    const created = await createUserProfile({
+      displayName: input.name || normalizedEmail.split('@')[0],
+      avatarUrl: input.picture,
+      rankLabel: 'Greenhorn'
+    });
+    userId = created.id;
+  }
+
+  await createIdentity({
+    userId,
+    type: 'google_oauth',
+    identifier: normalizedSub,
+    verified: true,
+    metadata: {
+      email: normalizedEmail,
+      name: input.name,
+      picture: input.picture
+    }
+  });
+
+  if (!existingEmail) {
+    await createIdentity({
+      userId,
+      type: 'email',
+      identifier: normalizedEmail,
+      verified: true,
+      metadata: { source: 'google_oauth' }
+    });
+  }
+
+  await ensureManagedEmbeddedWalletForUser(userId, { source: 'google_oauth' });
+  return withWallets(userId);
 }
 
 export async function createWalletChallenge(input: {
@@ -260,7 +327,8 @@ export async function verifyWalletChallenge(input: {
     addressNormalized: normalizedAddress,
     metadata: { method: consumed.walletSignMode, purpose: consumed.purpose }
   });
-  return loginResult;
+  await ensureManagedEmbeddedWalletForUser(loginResult.user.id, { source: 'external_wallet_login' });
+  return withWallets(loginResult.user.id);
 }
 
 export function getMe(session: SessionPayload): Promise<AuthResult> {

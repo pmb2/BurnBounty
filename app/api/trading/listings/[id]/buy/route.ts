@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { buyTradingListing } from '@/lib/profile-data';
+import { buyTradingListing, getTradingListingById } from '@/lib/profile-data';
 import { enforceSameOriginOrThrow, jsonAuthError, rateLimitOrThrow } from '@/lib/auth/http';
 import { sessionCookieName, validateSessionToken } from '@/lib/auth/session';
 import { addressesEqual, normalizeBchAddress } from '@/lib/auth/bch-address';
 import { authError } from '@/lib/auth/errors';
 import { getWalletsForUser } from '@/lib/auth/store';
-import { commitMarketIntentOnChipnet } from '@/lib/cashscript';
+import { commitMarketIntentOnChipnet, escrowBuyCardOnChipnet } from '@/lib/cashscript';
+import { resolveSessionSigner } from '@/lib/auth/signer';
 
 const bodySchema = z
   .object({
-    wallet_wif: z.string().min(1),
+    wallet_wif: z.string().min(1).optional(),
     buyer_address: z.string().min(6).optional()
   })
   .optional()
-  .default({ wallet_wif: '' });
+  .default({});
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: 'listing_not_found' }, { status: 404 });
     }
 
-    const parsed = bodySchema.safeParse(await req.json().catch(() => ({ wallet_wif: '' })));
+    const parsed = bodySchema.safeParse(await req.json().catch(() => ({})));
     if (!parsed.success) {
       return NextResponse.json(
         { ok: false, error: 'validation_failed', details: parsed.error.flatten() },
@@ -52,26 +53,84 @@ export async function POST(req: NextRequest, context: RouteContext) {
       if (!owns) throw authError('wallet_not_bound', 'Buyer address is not linked to this account');
     }
 
-    const walletCommit = await commitMarketIntentOnChipnet({
-      walletWif: parsed.data.wallet_wif,
-      action: 'buy',
-      payload: `${params.id}:${buyerCanonical}:${Date.now()}`
+    const signer = await resolveSessionSigner({
+      session,
+      providedWif: parsed.data.wallet_wif,
+      preferredAddress: buyerCanonical
     });
-    const committedCanonical = normalizeBchAddress(walletCommit.walletAddress).canonicalCashAddr;
+
+    const listingBefore = await getTradingListingById(params.id);
+    if (!listingBefore) {
+      return NextResponse.json({ ok: false, error: 'listing_not_found' }, { status: 404 });
+    }
+    if (listingBefore.status !== 'active') {
+      return NextResponse.json({ ok: false, error: 'listing_unavailable' }, { status: 409 });
+    }
+    if (addressesEqual(listingBefore.seller_address, buyerCanonical)) {
+      return NextResponse.json({ ok: false, error: 'cannot_buy_own_listing' }, { status: 409 });
+    }
+
+    let settlementTxid = '';
+    let committedBuyerAddress = buyerCanonical;
+    let chainCommitted = false;
+
+    if (
+      listingBefore.token_category &&
+      listingBefore.token_commitment &&
+      listingBefore.sale_txid &&
+      listingBefore.escrow_vout !== null &&
+      listingBefore.escrow_vout !== undefined
+    ) {
+      try {
+        const settlement = await escrowBuyCardOnChipnet({
+          buyerWif: signer.wif,
+          buyerAddress: buyerCanonical,
+          sellerAddress: listingBefore.seller_address,
+          priceSats: Number(listingBefore.price_sats),
+          tokenCategory: listingBefore.token_category,
+          tokenCommitment: listingBefore.token_commitment,
+          escrowTxid: listingBefore.sale_txid,
+          escrowVout: Number(listingBefore.escrow_vout)
+        });
+        settlementTxid = settlement.txid;
+        committedBuyerAddress = settlement.buyerAddress;
+        chainCommitted = true;
+      } catch (escrowErr: any) {
+        const commit = await commitMarketIntentOnChipnet({
+          walletWif: signer.wif,
+          action: 'buy',
+          payload: `${params.id}:${buyerCanonical}:${Date.now()}`
+        });
+        settlementTxid = commit.txid;
+        committedBuyerAddress = commit.walletAddress;
+        chainCommitted = Boolean(commit.chainCommitted);
+      }
+    } else {
+      const commit = await commitMarketIntentOnChipnet({
+        walletWif: signer.wif,
+        action: 'buy',
+        payload: `${params.id}:${buyerCanonical}:${Date.now()}`
+      });
+      settlementTxid = commit.txid;
+      committedBuyerAddress = commit.walletAddress;
+      chainCommitted = Boolean(commit.chainCommitted);
+    }
+
+    const committedCanonical = normalizeBchAddress(committedBuyerAddress).canonicalCashAddr;
     if (!addressesEqual(committedCanonical, buyerCanonical)) {
-      throw authError('address_mismatch', 'Wallet signature does not match buyer address');
+      throw authError('address_mismatch', 'Signer wallet does not match buyer address');
     }
 
     const listing = await buyTradingListing({
       listingId: params.id,
       buyerAddress: buyerCanonical,
-      buyTxid: walletCommit.txid
+      buyTxid: settlementTxid
     });
     return NextResponse.json({
       ok: true,
       listing,
-      chainTxid: walletCommit.txid,
-      chainCommitted: Boolean(walletCommit.chainCommitted)
+      chainTxid: settlementTxid,
+      chainCommitted
     });
   } catch (err: any) {
     const code = err?.code || err?.message;

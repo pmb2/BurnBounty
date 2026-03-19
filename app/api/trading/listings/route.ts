@@ -6,13 +6,16 @@ import { sessionCookieName, validateSessionToken } from '@/lib/auth/session';
 import { normalizeBchAddress, addressesEqual } from '@/lib/auth/bch-address';
 import { getWalletsForUser } from '@/lib/auth/store';
 import { authError } from '@/lib/auth/errors';
-import { commitMarketIntentOnChipnet } from '@/lib/cashscript';
+import { commitMarketIntentOnChipnet, escrowListCardOnChipnet } from '@/lib/cashscript';
+import { resolveSessionSigner } from '@/lib/auth/signer';
 
 const listingSchema = z.object({
   seller_address: z.string().min(6).optional(),
-  wallet_wif: z.string().min(1),
+  wallet_wif: z.string().min(1).optional(),
   card_id: z.string().min(6),
   price_sats: z.number().int().positive(),
+  token_category: z.string().min(6).optional(),
+  token_commitment: z.string().min(2).optional(),
   card_snapshot: z
     .object({
       nftId: z.string(),
@@ -22,7 +25,9 @@ const listingSchema = z.object({
       faceValueSats: z.number().int().positive(),
       weeklyDriftMilli: z.number().int(),
       randomCapWeeks: z.number().int().nonnegative(),
-      payoutSats: z.number().int().positive().optional()
+      payoutSats: z.number().int().positive().optional(),
+      tokenCategory: z.string().optional(),
+      tokenCommitment: z.string().optional()
     })
     .optional(),
   note: z.string().optional(),
@@ -70,14 +75,59 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const walletCommit = await commitMarketIntentOnChipnet({
-      walletWif: body.wallet_wif,
-      action: 'list',
-      payload: `${sellerCanonical}:${body.card_id}:${body.price_sats}:${Date.now()}`
+    const signer = await resolveSessionSigner({
+      session,
+      providedWif: body.wallet_wif,
+      preferredAddress: sellerCanonical
     });
-    const committedCanonical = normalizeBchAddress(walletCommit.walletAddress).canonicalCashAddr;
+
+    const tokenCategory = body.token_category || body.card_snapshot?.tokenCategory || '';
+    const tokenCommitment = body.token_commitment || body.card_snapshot?.tokenCommitment || '';
+
+    let escrowAddress: string | undefined;
+    let escrowVout: number | undefined;
+    let chainTxid = '';
+    let committedSellerAddress = sellerCanonical;
+    let chainCommitted = false;
+
+    if (tokenCategory && tokenCommitment) {
+      try {
+        const escrow = await escrowListCardOnChipnet({
+          sellerWif: signer.wif,
+          sellerAddress: sellerCanonical,
+          tokenCategory,
+          tokenCommitment,
+          priceSats: body.price_sats
+        });
+        escrowAddress = escrow.escrowAddress;
+        escrowVout = escrow.vout;
+        chainTxid = escrow.txid;
+        committedSellerAddress = escrow.sellerAddress;
+        chainCommitted = true;
+      } catch (escrowErr: any) {
+        const commit = await commitMarketIntentOnChipnet({
+          walletWif: signer.wif,
+          action: 'list',
+          payload: `${sellerCanonical}:${body.card_id}:${body.price_sats}:${Date.now()}`
+        });
+        chainTxid = commit.txid;
+        committedSellerAddress = commit.walletAddress;
+        chainCommitted = Boolean(commit.chainCommitted);
+      }
+    } else {
+      const commit = await commitMarketIntentOnChipnet({
+        walletWif: signer.wif,
+        action: 'list',
+        payload: `${sellerCanonical}:${body.card_id}:${body.price_sats}:${Date.now()}`
+      });
+      chainTxid = commit.txid;
+      committedSellerAddress = commit.walletAddress;
+      chainCommitted = Boolean(commit.chainCommitted);
+    }
+
+    const committedCanonical = normalizeBchAddress(committedSellerAddress).canonicalCashAddr;
     if (!addressesEqual(committedCanonical, sellerCanonical)) {
-      throw authError('address_mismatch', 'Wallet signature does not match seller address');
+      throw authError('address_mismatch', 'Signer wallet does not match seller address');
     }
 
     const cardSnapshot = body.card_snapshot
@@ -89,7 +139,9 @@ export async function POST(req: NextRequest) {
           faceValueSats: body.card_snapshot.faceValueSats,
           weeklyDriftMilli: body.card_snapshot.weeklyDriftMilli,
           randomCapWeeks: body.card_snapshot.randomCapWeeks,
-          payoutSats: body.card_snapshot.payoutSats
+          payoutSats: body.card_snapshot.payoutSats,
+          tokenCategory: tokenCategory || undefined,
+          tokenCommitment: tokenCommitment || undefined
         }
       : undefined;
 
@@ -97,15 +149,19 @@ export async function POST(req: NextRequest) {
       seller_address: sellerCanonical,
       card_id: body.card_id,
       price_sats: body.price_sats,
-      sale_txid: walletCommit.txid,
+      token_category: tokenCategory || undefined,
+      token_commitment: tokenCommitment || undefined,
+      escrow_address: escrowAddress,
+      escrow_vout: escrowVout,
+      sale_txid: chainTxid,
       card_snapshot: cardSnapshot,
       note: body.note,
       expires_at: body.expires_at
     });
     return NextResponse.json({
       listing: created,
-      chainTxid: walletCommit.txid,
-      chainCommitted: Boolean(walletCommit.chainCommitted)
+      chainTxid,
+      chainCommitted
     });
   } catch (err: any) {
     return jsonAuthError(err, 'Listing create failed');

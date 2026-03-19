@@ -173,8 +173,9 @@ npm run dev
 
 3. Open `http://localhost:3000` and run flow:
 
-- `/play` -> Access -> Commit -> Reveal
-- `/armory?tab=inventory` -> Burn / list / track stats
+- `/` -> `Play Now` -> `/auth` -> `/dashboard`
+- `/dashboard?tab=play` -> commit/reveal loop
+- `/dashboard?tab=inventory|market|ledger|settings` -> burn, list, buy, wallet/session management
 
 4. Scripted flow:
 
@@ -255,9 +256,10 @@ Live deploy is also VCS-driven via GitHub Actions on push to `main`.
 
 BurnBounty uses a BCH-native hybrid authentication model:
 
-- **Embedded wallet onboarding (primary)**: quickest path for new users; wallet is generated client-side and encrypted locally.
-- **External BCH wallet auth (power user path)**: nonce challenge + signature verification for non-custodial login/link.
-- **MetaMask Snap (optional/experimental)**: supported as a compatibility bridge, never the core BCH identity flow.
+- **Embedded wallet onboarding (primary)**: new users register/login quickly and receive an auto-provisioned embedded BCH wallet.
+- **External BCH wallet auth (power-user path)**: nonce challenge + signature verification for non-custodial login/link.
+- **Google OAuth onboarding**: fast first-time account entry; an embedded wallet is provisioned automatically after OAuth login.
+- **MetaMask Snap (optional/experimental)**: compatibility bridge only, never the core BCH identity flow.
 
 Why:
 
@@ -299,11 +301,13 @@ Security behavior:
 - auth-message signatures are not blockchain transactions and do not spend BCH
 - MetaMask Snap compatibility is isolated and non-core
 - current BCH auth verification path is classic compact signed-message verification (BIP322 support is not yet enabled)
+- dashboard header now shows compact hunter identity (username/avatar/rank), while external wallet linking is handled in `/dashboard?tab=settings`
 
 Productionization (auth-critical):
 
 - challenges, wallet bindings, sessions, audit events, and auth rate limits are DB-backed (Postgres/Supabase)
 - challenge consumption is atomic and replay-safe under concurrency
+- external wallet login concurrency conflicts recover to canonical owner resolution (no duplicate-identity race leakage)
 - wallet identity uniqueness is enforced with durable DB constraints on canonical BCH storage key
 - session revocation is durable (`auth_sessions.revoked_at`)
 - sensitive actions use recent-auth checks (`recent_auth_at`)

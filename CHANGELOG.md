@@ -27,6 +27,19 @@ Format inspired by Keep a Changelog and semantic versioning.
   - `public/3d/*` asset directories
 
 ### Changed
+- single-hub UX consolidation:
+  - `/` -> `/auth` -> `/dashboard` is now the canonical flow
+  - legacy pages redirect into dashboard tabs (`play`, `inventory`, `market`, `ledger`, `settings`)
+  - top-right debug wallet/WIF controls removed from global header; replaced with hunter identity menu + settings entry
+- auth onboarding and profile UX:
+  - Google OAuth start/callback routes added and wired to account/session issuance
+  - auto-provisioned embedded wallets now run on embedded register/login and OAuth/external login
+  - new `/api/auth/sessions` endpoint and settings panel session history view
+- market settlement infrastructure:
+  - listing and buy endpoints now resolve signer from session-managed embedded wallet when explicit WIF is omitted
+  - escrow listing/purchase path added for on-chain settlement, with intent-marker fallback retained when escrow metadata is absent
+- auth race hardening:
+  - external wallet login now safely handles unique-constraint races and resolves to existing canonical owner instead of surfacing 400 duplicate-key failures
 - core user flow consolidated into hubs:
   - `/play` (access + commit + reveal)
   - `/armory` (inventory + market + ledger)

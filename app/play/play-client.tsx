@@ -353,7 +353,7 @@ export default function PlayClientPage() {
         <section className="bounty-panel relative mb-6 rounded-2xl p-4">
           <ActiveBoardBackdrop density="low" />
           <div className="relative z-10">
-            <WalletAuthPanel defaultMode="embedded" nextPath="/play" />
+            <WalletAuthPanel defaultMode="embedded" nextPath="/dashboard?tab=play" />
           </div>
         </section>
       )}
@@ -519,10 +519,10 @@ export default function PlayClientPage() {
       </section>
 
       <div className="mt-6 flex flex-wrap gap-3">
-        <Link href="/armory?tab=inventory">
+        <Link href="/dashboard?tab=inventory">
           <Button variant="outline">Open Armory</Button>
         </Link>
-        <Link href="/armory?tab=market">
+        <Link href="/dashboard?tab=market">
           <Button variant="outline">Open Market</Button>
         </Link>
       </div>

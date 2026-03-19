@@ -19,6 +19,10 @@ export type MarketListing = {
   buyer_address?: string | null;
   card_id: string;
   price_sats: number;
+  token_category?: string | null;
+  token_commitment?: string | null;
+  escrow_address?: string | null;
+  escrow_vout?: number | null;
   sale_txid?: string | null;
   buy_txid?: string | null;
   note?: string | null;
@@ -63,6 +67,7 @@ export async function listTradingListings(includeSold = false): Promise<MarketLi
   try {
     const { rows } = await dbQuery(
       `select id::text, seller_address, buyer_address, card_id, price_sats::text as price_sats,
+              token_category, token_commitment, escrow_address, escrow_vout,
               sale_txid, buy_txid, note, expires_at, created_at, sold_at, status, card_snapshot
        from market_listings
        where ($1::boolean = true or status = 'active')
@@ -82,10 +87,29 @@ export async function listTradingListings(includeSold = false): Promise<MarketLi
   }
 }
 
+export async function getTradingListingById(listingId: string): Promise<MarketListing | null> {
+  const { rows } = await dbQuery(
+    `select id::text, seller_address, buyer_address, card_id, price_sats::text as price_sats,
+            token_category, token_commitment, escrow_address, escrow_vout,
+            sale_txid, buy_txid, note, expires_at, created_at, sold_at, status, card_snapshot
+     from market_listings
+     where id = $1
+     limit 1`,
+    [listingId]
+  );
+  if (!rows[0]) return null;
+  const row: any = rows[0];
+  return { ...row, price_sats: Number(row.price_sats) };
+}
+
 export async function createTradingListing(input: {
   seller_address: string;
   card_id: string;
   price_sats: number;
+  token_category?: string;
+  token_commitment?: string;
+  escrow_address?: string;
+  escrow_vout?: number;
   sale_txid?: string;
   card_snapshot?: MarketCardSnapshot;
   note?: string;
@@ -93,14 +117,22 @@ export async function createTradingListing(input: {
 }): Promise<MarketListing> {
   try {
     const { rows } = await dbQuery(
-      `insert into market_listings (seller_address, card_id, price_sats, sale_txid, card_snapshot, note, expires_at, status)
-       values ($1, $2, $3, $4, $5::jsonb, $6, $7, 'active')
+      `insert into market_listings (
+          seller_address, card_id, price_sats, token_category, token_commitment, escrow_address, escrow_vout,
+          sale_txid, card_snapshot, note, expires_at, status
+       )
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, 'active')
        returning id::text, seller_address, buyer_address, card_id, price_sats::text as price_sats,
+                 token_category, token_commitment, escrow_address, escrow_vout,
                  sale_txid, buy_txid, card_snapshot, note, expires_at, created_at, sold_at, status`,
       [
         input.seller_address,
         input.card_id,
         input.price_sats,
+        input.token_category || null,
+        input.token_commitment || null,
+        input.escrow_address || null,
+        Number.isFinite(input.escrow_vout as number) ? input.escrow_vout : null,
         input.sale_txid || null,
         JSON.stringify(input.card_snapshot || null),
         input.note || null,
@@ -126,6 +158,7 @@ export async function buyTradingListing(input: {
   return dbTx(async (client) => {
     const { rows } = await client.query(
       `select id::text, seller_address, buyer_address, card_id, price_sats::text as price_sats,
+              token_category, token_commitment, escrow_address, escrow_vout,
               sale_txid, buy_txid, card_snapshot, note, expires_at, created_at, sold_at, status
        from market_listings
        where id = $1
@@ -162,6 +195,7 @@ export async function buyTradingListing(input: {
            updated_at = now()
        where id = $1 and status = 'active'
        returning id::text, seller_address, buyer_address, card_id, price_sats::text as price_sats,
+                 token_category, token_commitment, escrow_address, escrow_vout,
                  sale_txid, buy_txid, card_snapshot, note, expires_at, created_at, sold_at, status`,
       [input.listingId, input.buyerAddress, input.buyTxid || null]
     );

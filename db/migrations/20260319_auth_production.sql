@@ -8,9 +8,14 @@ create table if not exists auth_users (
   status text not null default 'active',
   display_name text,
   bio text,
+  avatar_url text,
+  rank_label text not null default 'Greenhorn',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table auth_users add column if not exists avatar_url text;
+alter table auth_users add column if not exists rank_label text not null default 'Greenhorn';
 
 create table if not exists auth_identities (
   id uuid primary key default gen_random_uuid(),
@@ -89,6 +94,18 @@ create table if not exists auth_sessions (
 
 create index if not exists idx_auth_sessions_user_id on auth_sessions(user_id);
 create index if not exists idx_auth_sessions_expires on auth_sessions(expires_at);
+create index if not exists idx_auth_sessions_last_seen on auth_sessions(user_id, last_seen_at desc);
+
+create table if not exists auth_wallet_secrets (
+  wallet_id uuid primary key references auth_wallets(id) on delete cascade,
+  scheme text not null default 'aes-256-gcm',
+  ciphertext text not null,
+  iv text not null,
+  auth_tag text not null,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
 
 create table if not exists auth_audit_events (
   id bigserial primary key,
@@ -126,6 +143,10 @@ create table if not exists market_listings (
   seller_address text not null,
   card_id text not null,
   price_sats bigint not null check (price_sats > 0),
+  token_category text,
+  token_commitment text,
+  escrow_address text,
+  escrow_vout integer,
   card_snapshot jsonb,
   status text not null default 'active',
   buyer_address text,
@@ -145,6 +166,10 @@ create index if not exists idx_market_listings_status on market_listings(status)
 alter table market_listings add column if not exists card_snapshot jsonb;
 alter table market_listings add column if not exists status text not null default 'active';
 alter table market_listings add column if not exists buyer_address text;
+alter table market_listings add column if not exists token_category text;
+alter table market_listings add column if not exists token_commitment text;
+alter table market_listings add column if not exists escrow_address text;
+alter table market_listings add column if not exists escrow_vout integer;
 alter table market_listings add column if not exists sale_txid text;
 alter table market_listings add column if not exists buy_txid text;
 alter table market_listings add column if not exists sold_at timestamptz;

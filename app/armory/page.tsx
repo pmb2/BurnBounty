@@ -1,4 +1,4 @@
-import ArmoryClientPage from './armory-client';
+import { redirect } from 'next/navigation';
 
 type ArmoryPageProps = {
   searchParams?: {
@@ -7,5 +7,9 @@ type ArmoryPageProps = {
 };
 
 export default function ArmoryPage({ searchParams }: ArmoryPageProps) {
-  return <ArmoryClientPage initialTab={searchParams?.tab || null} />;
+  const tab = searchParams?.tab;
+  if (tab === 'market' || tab === 'ledger') {
+    redirect(`/dashboard?tab=${tab}`);
+  }
+  redirect('/dashboard?tab=inventory');
 }

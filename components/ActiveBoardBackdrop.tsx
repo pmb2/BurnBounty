@@ -11,7 +11,7 @@ const statusLines = [
   'Hunter Relay: online',
   'Bounty Feed: synced',
   'CashTokens Node: healthy',
-  'Commit-Reveal Engine: armed'
+  'Market Escrow: active'
 ];
 
 export function ActiveBoardBackdrop({ className = '', density = 'medium' }: ActiveBoardBackdropProps) {

@@ -3,7 +3,7 @@ import { verifySessionTokenEdge } from '@/lib/auth/session-edge';
 
 const SESSION_COOKIE_NAME = 'bb_session';
 
-const protectedRoutes = ['/dashboard', '/collection', '/trading', '/armory'];
+const protectedRoutes = ['/dashboard', '/collection', '/trading', '/armory', '/settings'];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -23,5 +23,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/collection/:path*', '/trading/:path*', '/armory/:path*']
+  matcher: ['/dashboard/:path*', '/collection/:path*', '/trading/:path*', '/armory/:path*', '/settings/:path*']
 };
