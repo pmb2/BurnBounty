@@ -16,6 +16,11 @@ create table if not exists auth_users (
 
 alter table auth_users add column if not exists avatar_url text;
 alter table auth_users add column if not exists rank_label text not null default 'Greenhorn';
+alter table auth_users add column if not exists status text not null default 'active';
+alter table auth_users add column if not exists display_name text;
+alter table auth_users add column if not exists bio text;
+alter table auth_users add column if not exists created_at timestamptz not null default now();
+alter table auth_users add column if not exists updated_at timestamptz not null default now();
 
 create table if not exists auth_identities (
   id uuid primary key default gen_random_uuid(),
@@ -159,10 +164,6 @@ create table if not exists market_listings (
   updated_at timestamptz not null default now()
 );
 
-create index if not exists idx_market_listings_created_at on market_listings(created_at desc);
-create index if not exists idx_market_listings_seller on market_listings(seller_address);
-create index if not exists idx_market_listings_status on market_listings(status);
-
 alter table market_listings add column if not exists card_snapshot jsonb;
 alter table market_listings add column if not exists status text not null default 'active';
 alter table market_listings add column if not exists buyer_address text;
@@ -173,3 +174,7 @@ alter table market_listings add column if not exists escrow_vout integer;
 alter table market_listings add column if not exists sale_txid text;
 alter table market_listings add column if not exists buy_txid text;
 alter table market_listings add column if not exists sold_at timestamptz;
+
+create index if not exists idx_market_listings_created_at on market_listings(created_at desc);
+create index if not exists idx_market_listings_seller on market_listings(seller_address);
+create index if not exists idx_market_listings_status on market_listings(status);
