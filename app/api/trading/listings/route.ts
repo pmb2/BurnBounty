@@ -6,9 +6,11 @@ import { sessionCookieName, validateSessionToken } from '@/lib/auth/session';
 import { normalizeBchAddress, addressesEqual } from '@/lib/auth/bch-address';
 import { getWalletsForUser } from '@/lib/auth/store';
 import { authError } from '@/lib/auth/errors';
+import { commitMarketIntentOnChipnet } from '@/lib/cashscript';
 
 const listingSchema = z.object({
   seller_address: z.string().min(6).optional(),
+  wallet_wif: z.string().min(1),
   card_id: z.string().min(6),
   price_sats: z.number().int().positive(),
   card_snapshot: z
@@ -68,6 +70,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const walletCommit = await commitMarketIntentOnChipnet({
+      walletWif: body.wallet_wif,
+      action: 'list',
+      payload: `${sellerCanonical}:${body.card_id}:${body.price_sats}:${Date.now()}`
+    });
+    const committedCanonical = normalizeBchAddress(walletCommit.walletAddress).canonicalCashAddr;
+    if (!addressesEqual(committedCanonical, sellerCanonical)) {
+      throw authError('address_mismatch', 'Wallet signature does not match seller address');
+    }
+
     const cardSnapshot = body.card_snapshot
       ? {
           nftId: body.card_snapshot.nftId,
@@ -85,11 +97,16 @@ export async function POST(req: NextRequest) {
       seller_address: sellerCanonical,
       card_id: body.card_id,
       price_sats: body.price_sats,
+      sale_txid: walletCommit.txid,
       card_snapshot: cardSnapshot,
       note: body.note,
       expires_at: body.expires_at
     });
-    return NextResponse.json({ listing: created });
+    return NextResponse.json({
+      listing: created,
+      chainTxid: walletCommit.txid,
+      chainCommitted: Boolean(walletCommit.chainCommitted)
+    });
   } catch (err: any) {
     return jsonAuthError(err, 'Listing create failed');
   }

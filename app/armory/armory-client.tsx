@@ -15,6 +15,7 @@ import type { CardAsset } from '@/types/cards';
 import type { MarketCardSnapshot, MarketListing } from '@/lib/profile-data';
 
 type ArmoryTab = 'inventory' | 'market' | 'ledger';
+type PriceUnit = 'sats' | 'bits' | 'mbch' | 'bch';
 type SortOption =
   | 'newest'
   | 'oldest'
@@ -39,6 +40,29 @@ const tierRank: Record<CardAsset['tier'], number> = {
   Diamond: 4
 };
 
+const priceUnitConfig: Record<PriceUnit, { label: string; multiplier: number; decimals: number }> = {
+  sats: { label: 'sats', multiplier: 1, decimals: 0 },
+  bits: { label: 'bits (μBCH)', multiplier: 100, decimals: 2 },
+  mbch: { label: 'mBCH', multiplier: 100_000, decimals: 5 },
+  bch: { label: 'BCH', multiplier: 100_000_000, decimals: 8 }
+};
+
+function parsePriceToSats(priceInput: string, unit: PriceUnit): number {
+  const sanitized = priceInput.replaceAll(',', '').trim();
+  const normalized = Number.parseFloat(sanitized);
+  if (!Number.isFinite(normalized) || normalized <= 0) return NaN;
+  return Math.round(normalized * priceUnitConfig[unit].multiplier);
+}
+
+function formatBchFromSats(sats: number): string {
+  return `${(sats / 1e8).toFixed(8)} BCH`;
+}
+
+function shortAddress(value: string) {
+  if (value.length < 18) return value;
+  return `${value.slice(0, 10)}...${value.slice(-6)}`;
+}
+
 type ArmoryClientPageProps = {
   initialTab?: string | null;
 };
@@ -56,9 +80,14 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
   const [profiles, setProfiles] = useState<any[]>([]);
   const [session, setSession] = useState<MeResponse | null>(null);
   const [selectedCardId, setSelectedCardId] = useState('');
-  const [price, setPrice] = useState('100000');
+  const [price, setPrice] = useState('0.001');
+  const [priceUnit, setPriceUnit] = useState<PriceUnit>('bch');
   const [note, setNote] = useState('');
   const [buyingListingId, setBuyingListingId] = useState<string | null>(null);
+  const [listingConfirmOpen, setListingConfirmOpen] = useState(false);
+  const [creatingListing, setCreatingListing] = useState(false);
+  const [buyConfirmListing, setBuyConfirmListing] = useState<MarketListing | null>(null);
+  const [gameplayWif, setGameplayWif] = useState('');
 
   const [redeemed, setRedeemed] = useState(0);
   const [house, setHouse] = useState(0);
@@ -81,6 +110,8 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
       .then(async (res) => (res.ok ? ((await res.json()) as MeResponse) : null))
       .then((me) => setSession(me))
       .catch(() => setSession(null));
+
+    setGameplayWif(localStorage.getItem('burnbounty.wif') || '');
   }, []);
 
   useEffect(() => {
@@ -147,25 +178,42 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
     }
   }
 
-  async function createListing() {
+  function requestCreateListing() {
     try {
       const sellerAddress = session?.primaryWallet?.address || session?.wallets?.[0]?.address;
       if (!sellerAddress) {
         throw new Error('Primary wallet not available. Link a wallet in Auth Hub first.');
       }
       if (!selectedCardId) throw new Error('Select a card first.');
-      const selectedCard = cards.find((entry) => entry.nftId === selectedCardId);
       if (!selectedCard) throw new Error('Selected card is no longer available.');
-      const priceSats = Number(price);
+      const priceSats = parsePriceToSats(price, priceUnit);
       if (!Number.isFinite(priceSats) || priceSats <= 0) {
-        throw new Error('Price must be a positive number of sats.');
+        throw new Error('Price must be a positive number.');
       }
+      setListingConfirmOpen(true);
+    } catch (err: any) {
+      toast.error('Listing setup failed', { description: err.message || 'Unknown error' });
+    }
+  }
+
+  async function confirmCreateListing() {
+    try {
+      const sellerAddress = session?.primaryWallet?.address || session?.wallets?.[0]?.address;
+      if (!sellerAddress) throw new Error('Primary wallet not available. Link a wallet in Auth Hub first.');
+      if (!selectedCard) throw new Error('Selected card is no longer available.');
+      const signerWif = gameplayWif || localStorage.getItem('burnbounty.wif') || '';
+      if (!signerWif) throw new Error('Gameplay wallet key required. Connect Gameplay Key in Play tab first.');
+      const priceSats = parsePriceToSats(price, priceUnit);
+      if (!Number.isFinite(priceSats) || priceSats <= 0) throw new Error('Price must be a positive number.');
+
+      setCreatingListing(true);
       const res = await fetch('/api/trading/listings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           seller_address: sellerAddress,
-          card_id: selectedCardId,
+          wallet_wif: signerWif,
+          card_id: selectedCard.nftId,
           price_sats: priceSats,
           card_snapshot: {
             nftId: selectedCard.nftId,
@@ -191,6 +239,10 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
         throw new Error(json.error || 'Create listing failed');
       }
       toast.success('Listing created');
+      toast.info('Chain intent committed', {
+        description: json.chainTxid ? `TxID ${json.chainTxid.slice(0, 20)}...` : 'Intent signed and stored.'
+      });
+      setListingConfirmOpen(false);
       setNote('');
 
       const refresh = await fetch('/api/trading/listings');
@@ -198,6 +250,8 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
       setListings(payload.listings || []);
     } catch (err: any) {
       toast.error('Listing failed', { description: err.message || 'Unknown error' });
+    } finally {
+      setCreatingListing(false);
     }
   }
 
@@ -208,10 +262,12 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
       if (!buyerAddress) {
         throw new Error('Link a wallet in Auth Hub before buying.');
       }
+      const signerWif = gameplayWif || localStorage.getItem('burnbounty.wif') || '';
+      if (!signerWif) throw new Error('Gameplay wallet key required. Connect Gameplay Key in Play tab first.');
       const res = await fetch(`/api/trading/listings/${encodeURIComponent(listing.id)}/buy`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ buyer_address: buyerAddress })
+        body: JSON.stringify({ buyer_address: buyerAddress, wallet_wif: signerWif })
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Buy failed');
@@ -247,13 +303,31 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
 
       setListings((prev) => prev.filter((entry) => entry.id !== listing.id));
       toast.success('Listing purchased', {
-        description: `You bought ${(listing.price_sats / 1e8).toFixed(8)} BCH bounty card.`
+        description: `You bought ${formatBchFromSats(Number(listing.price_sats))}.`
       });
+      toast.info('Chain intent committed', {
+        description: json.chainTxid ? `TxID ${json.chainTxid.slice(0, 20)}...` : 'Intent signed and stored.'
+      });
+      setBuyConfirmListing(null);
     } catch (err: any) {
       toast.error('Buy failed', { description: err.message || 'Unknown error' });
     } finally {
       setBuyingListingId(null);
     }
+  }
+
+  function requestBuyListing(listing: MarketListing) {
+    if (!session?.ok) {
+      toast.error('Authentication required', { description: 'Sign in before buying listings.' });
+      return;
+    }
+    if (!gameplayWif && !localStorage.getItem('burnbounty.wif')) {
+      toast.error('Gameplay key missing', {
+        description: 'Enter your gameplay WIF below to sign the purchase intent.'
+      });
+      return;
+    }
+    setBuyConfirmListing(listing);
   }
 
   const sortedCards = useMemo(() => {
@@ -284,6 +358,12 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
     for (const card of cards) map.set(card.nftId, card);
     return map;
   }, [cards]);
+
+  const selectedCard = useMemo(
+    () => cards.find((entry) => entry.nftId === selectedCardId) || null,
+    [cards, selectedCardId]
+  );
+  const priceSatsPreview = useMemo(() => parsePriceToSats(price, priceUnit), [price, priceUnit]);
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
@@ -363,7 +443,7 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
               Seller wallet: {session?.primaryWallet?.address || 'Not available (link wallet in Auth Hub)'}
             </p>
 
-            <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <div className="mt-4 grid gap-3 md:grid-cols-4">
               <select
                 value={selectedCardId}
                 onChange={(e) => setSelectedCardId(e.target.value)}
@@ -376,10 +456,50 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
                   </option>
                 ))}
               </select>
-              <input value={price} onChange={(e) => setPrice(e.target.value)} className="rounded border border-border bg-transparent px-3 py-2 text-sm" placeholder="Price sats" />
+              <input
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                className="rounded border border-border bg-transparent px-3 py-2 text-sm"
+                placeholder="Price"
+              />
+              <select
+                value={priceUnit}
+                onChange={(e) => setPriceUnit(e.target.value as PriceUnit)}
+                className="rounded border border-border bg-transparent px-3 py-2 text-sm"
+              >
+                <option value="sats" className="bg-[#111]">sats</option>
+                <option value="bits" className="bg-[#111]">bits (μBCH)</option>
+                <option value="mbch" className="bg-[#111]">mBCH</option>
+                <option value="bch" className="bg-[#111]">BCH</option>
+              </select>
               <input value={note} onChange={(e) => setNote(e.target.value)} className="rounded border border-border bg-transparent px-3 py-2 text-sm" placeholder="Optional note" />
             </div>
-            <Button className="mt-3" onClick={createListing}>List Card</Button>
+            <div className="mt-3 rounded-lg border border-border/70 bg-black/20 p-3">
+              <label htmlFor="gameplay-wif" className="text-xs uppercase tracking-[0.14em] text-zinc-400">
+                Gameplay Wallet Key (Chipnet WIF)
+              </label>
+              <input
+                id="gameplay-wif"
+                value={gameplayWif}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setGameplayWif(next);
+                  localStorage.setItem('burnbounty.wif', next);
+                }}
+                className="mt-2 w-full rounded border border-border bg-transparent px-3 py-2 text-sm"
+                placeholder="cV... / L... (demo only)"
+              />
+              <p className="mt-1 text-[11px] text-zinc-500">
+                Used for one-click market signing. This signs an intent and records a chain-linked commit marker.
+              </p>
+            </div>
+            <p className="mt-2 text-xs text-zinc-400">
+              Listing preview:{' '}
+              {Number.isFinite(priceSatsPreview)
+                ? `${formatBchFromSats(priceSatsPreview)} (${priceSatsPreview.toLocaleString()} sats)`
+                : 'invalid price'}
+            </p>
+            <Button className="mt-3" onClick={requestCreateListing}>List Card</Button>
 
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               {listings.map((l) => (
@@ -421,11 +541,19 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
                               : `Card ref ${String(l.card_id).slice(0, 16)}...`}
                           </p>
                           <p><span className="text-zinc-400">Price:</span> {(Number(l.price_sats) / 1e8).toFixed(8)} BCH</p>
+                          <p className="text-xs text-zinc-500">
+                            {Number(l.price_sats).toLocaleString()} sats
+                          </p>
                           <p><span className="text-zinc-400">Seller:</span> {l.seller_address}</p>
+                          {l.sale_txid && (
+                            <p className="text-xs text-zinc-500">
+                              Sale commit: {shortAddress(l.sale_txid)}
+                            </p>
+                          )}
                           {l.note && <p><span className="text-zinc-400">Note:</span> {l.note}</p>}
                           <Button
                             className="mt-2 w-full"
-                            onClick={() => buyListing(l)}
+                            onClick={() => requestBuyListing(l)}
                             disabled={
                               buyingListingId === l.id ||
                               !session?.ok ||
@@ -481,6 +609,112 @@ export default function ArmoryClientPage({ initialTab }: ArmoryClientPageProps) 
             </div>
           </div>
         </section>
+      )}
+
+      {listingConfirmOpen && selectedCard && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-xl rounded-2xl border border-amber-500/50 bg-[#130d08] p-5 shadow-[0_0_30px_rgba(251,146,60,0.3)]">
+            <p className="text-xs uppercase tracking-[0.2em] text-amber-300">Confirm Sale</p>
+            <h3 className="mt-1 text-2xl font-bold">Sign Listing Intent</h3>
+            <p className="mt-2 text-sm text-zinc-300">
+              Confirm this listing to sign with your wallet key and commit the sale intent to chain-linked records.
+            </p>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-[140px_1fr]">
+              <div className="relative h-44 overflow-hidden rounded-xl border border-border/70">
+                <Image src={selectedCard.image} alt={selectedCard.name} fill className="object-cover" />
+              </div>
+              <div className="space-y-2 rounded-xl border border-border/70 bg-black/30 p-3 text-sm">
+                <p><span className="text-zinc-400">Card:</span> {selectedCard.name}</p>
+                <p><span className="text-zinc-400">Tier:</span> {selectedCard.tier}</p>
+                <p><span className="text-zinc-400">Stats:</span> {selectedCard.weeklyDriftMilli >= 0 ? '+' : ''}{(selectedCard.weeklyDriftMilli / 10).toFixed(1)}%/wk, cap {(selectedCard.randomCapWeeks / 52).toFixed(1)}y</p>
+                <p><span className="text-zinc-400">Price:</span> {Number.isFinite(priceSatsPreview) ? formatBchFromSats(priceSatsPreview) : 'Invalid'}</p>
+                <p className="text-xs text-zinc-500">{Number.isFinite(priceSatsPreview) ? `${priceSatsPreview.toLocaleString()} sats` : ''}</p>
+                {note && <p><span className="text-zinc-400">Note:</span> {note}</p>}
+              </div>
+            </div>
+
+            <div className="mt-4 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (!creatingListing) setListingConfirmOpen(false);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={confirmCreateListing} disabled={creatingListing || !Number.isFinite(priceSatsPreview)}>
+                {creatingListing ? 'Signing & Listing...' : 'Sign & List Card'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {buyConfirmListing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-xl rounded-2xl border border-emerald-500/45 bg-[#10140f] p-5 shadow-[0_0_30px_rgba(34,197,94,0.24)]">
+            <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">Confirm Purchase</p>
+            <h3 className="mt-1 text-2xl font-bold">Sign Buy Intent</h3>
+            <p className="mt-2 text-sm text-zinc-300">
+              One-click confirm to sign this buy from your wallet and record the purchase commit.
+            </p>
+
+            {(() => {
+              const listedCard = buyConfirmListing.card_snapshot
+                ? normalizeCardAsset({
+                    nftId: buyConfirmListing.card_snapshot.nftId,
+                    name: buyConfirmListing.card_snapshot.name,
+                    tier: buyConfirmListing.card_snapshot.tier,
+                    image: buyConfirmListing.card_snapshot.image,
+                    faceValueSats: buyConfirmListing.card_snapshot.faceValueSats,
+                    originalFaceValueSats: buyConfirmListing.card_snapshot.faceValueSats,
+                    payoutSats:
+                      buyConfirmListing.card_snapshot.payoutSats ||
+                      Math.floor(buyConfirmListing.card_snapshot.faceValueSats * 0.8),
+                    weeklyDriftMilli: buyConfirmListing.card_snapshot.weeklyDriftMilli,
+                    randomCapWeeks: buyConfirmListing.card_snapshot.randomCapWeeks,
+                    series: 'NORMAL',
+                    categoryId: 'market-snapshot',
+                    commitmentHex: '',
+                    bcmrUri: `ipfs://burnbounty/market/${buyConfirmListing.card_snapshot.nftId}.json`
+                  })
+                : (cardById.get(buyConfirmListing.card_id) ?? null);
+
+              return (
+                <div className="mt-4 grid gap-4 sm:grid-cols-[140px_1fr]">
+                  <div className="relative h-44 overflow-hidden rounded-xl border border-border/70">
+                    <Image src={listedCard?.image || '/cards/3LjTX.jpg'} alt={listedCard?.name || 'Listed card'} fill className="object-cover" />
+                  </div>
+                  <div className="space-y-2 rounded-xl border border-border/70 bg-black/30 p-3 text-sm">
+                    <p><span className="text-zinc-400">Card:</span> {listedCard?.name || buyConfirmListing.card_id}</p>
+                    <p><span className="text-zinc-400">Tier:</span> {listedCard?.tier || 'Unknown'}</p>
+                    {listedCard && (
+                      <p><span className="text-zinc-400">Stats:</span> {listedCard.weeklyDriftMilli >= 0 ? '+' : ''}{(listedCard.weeklyDriftMilli / 10).toFixed(1)}%/wk, cap {(listedCard.randomCapWeeks / 52).toFixed(1)}y</p>
+                    )}
+                    <p><span className="text-zinc-400">Price:</span> {formatBchFromSats(Number(buyConfirmListing.price_sats))}</p>
+                    <p className="text-xs text-zinc-500">{Number(buyConfirmListing.price_sats).toLocaleString()} sats</p>
+                    <p><span className="text-zinc-400">Seller:</span> {shortAddress(buyConfirmListing.seller_address)}</p>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="mt-4 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (!buyingListingId) setBuyConfirmListing(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={() => buyListing(buyConfirmListing)} disabled={buyingListingId === buyConfirmListing.id}>
+                {buyingListingId === buyConfirmListing.id ? 'Signing & Buying...' : 'Sign & Buy Card'}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );

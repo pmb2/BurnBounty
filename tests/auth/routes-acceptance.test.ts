@@ -395,6 +395,7 @@ test('auth-critical trading listing creation requires durable valid session', as
       'POST',
       {
         seller_address: address,
+        wallet_wif: key.toWIF(),
         card_id: 'card-1234',
         price_sats: 15000
       },
@@ -410,6 +411,7 @@ test('auth-critical trading listing creation requires durable valid session', as
       'POST',
       {
         seller_address: address,
+        wallet_wif: key.toWIF(),
         card_id: 'card-5555',
         price_sats: 18000
       },
@@ -451,6 +453,7 @@ test('universal market buy: another authenticated user can buy active listing', 
       'POST',
       {
         seller_address: sellerAddress,
+        wallet_wif: sellerKey.toWIF(),
         card_id: 'card-market-111',
         price_sats: 222222,
         card_snapshot: {
@@ -491,7 +494,7 @@ test('universal market buy: another authenticated user can buy active listing', 
     mkReq(
       `http://localhost/api/trading/listings/${createdBody.listing.id}/buy`,
       'POST',
-      { buyer_address: buyerAddress },
+      { buyer_address: buyerAddress, wallet_wif: buyerKey.toWIF() },
       buyerCookie
     ),
     { params: Promise.resolve({ id: createdBody.listing.id }) }
@@ -505,7 +508,7 @@ test('universal market buy: another authenticated user can buy active listing', 
     mkReq(
       `http://localhost/api/trading/listings/${createdBody.listing.id}/buy`,
       'POST',
-      { buyer_address: buyerAddress },
+      { buyer_address: buyerAddress, wallet_wif: buyerKey.toWIF() },
       buyerCookie
     ),
     { params: Promise.resolve({ id: createdBody.listing.id }) }

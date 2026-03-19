@@ -19,6 +19,8 @@ export type MarketListing = {
   buyer_address?: string | null;
   card_id: string;
   price_sats: number;
+  sale_txid?: string | null;
+  buy_txid?: string | null;
   note?: string | null;
   expires_at?: string | null;
   created_at?: string;
@@ -61,7 +63,7 @@ export async function listTradingListings(includeSold = false): Promise<MarketLi
   try {
     const { rows } = await dbQuery(
       `select id::text, seller_address, buyer_address, card_id, price_sats::text as price_sats,
-              note, expires_at, created_at, sold_at, status, card_snapshot
+              sale_txid, buy_txid, note, expires_at, created_at, sold_at, status, card_snapshot
        from market_listings
        where ($1::boolean = true or status = 'active')
        order by created_at desc
@@ -84,20 +86,22 @@ export async function createTradingListing(input: {
   seller_address: string;
   card_id: string;
   price_sats: number;
+  sale_txid?: string;
   card_snapshot?: MarketCardSnapshot;
   note?: string;
   expires_at?: string;
 }): Promise<MarketListing> {
   try {
     const { rows } = await dbQuery(
-      `insert into market_listings (seller_address, card_id, price_sats, card_snapshot, note, expires_at, status)
-       values ($1, $2, $3, $4::jsonb, $5, $6, 'active')
+      `insert into market_listings (seller_address, card_id, price_sats, sale_txid, card_snapshot, note, expires_at, status)
+       values ($1, $2, $3, $4, $5::jsonb, $6, $7, 'active')
        returning id::text, seller_address, buyer_address, card_id, price_sats::text as price_sats,
-                 card_snapshot, note, expires_at, created_at, sold_at, status`,
+                 sale_txid, buy_txid, card_snapshot, note, expires_at, created_at, sold_at, status`,
       [
         input.seller_address,
         input.card_id,
         input.price_sats,
+        input.sale_txid || null,
         JSON.stringify(input.card_snapshot || null),
         input.note || null,
         input.expires_at || null
@@ -117,11 +121,12 @@ export async function createTradingListing(input: {
 export async function buyTradingListing(input: {
   listingId: string;
   buyerAddress: string;
+  buyTxid?: string;
 }): Promise<MarketListing> {
   return dbTx(async (client) => {
     const { rows } = await client.query(
       `select id::text, seller_address, buyer_address, card_id, price_sats::text as price_sats,
-              card_snapshot, note, expires_at, created_at, sold_at, status
+              sale_txid, buy_txid, card_snapshot, note, expires_at, created_at, sold_at, status
        from market_listings
        where id = $1
        limit 1
@@ -152,12 +157,13 @@ export async function buyTradingListing(input: {
       `update market_listings
        set status = 'sold',
            buyer_address = $2,
+           buy_txid = $3,
            sold_at = now(),
            updated_at = now()
        where id = $1 and status = 'active'
        returning id::text, seller_address, buyer_address, card_id, price_sats::text as price_sats,
-                 card_snapshot, note, expires_at, created_at, sold_at, status`,
-      [input.listingId, input.buyerAddress]
+                 sale_txid, buy_txid, card_snapshot, note, expires_at, created_at, sold_at, status`,
+      [input.listingId, input.buyerAddress, input.buyTxid || null]
     );
 
     if (!updatedRows[0]) {

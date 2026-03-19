@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { CARD_TEMPLATES } from '@/data/cards';
+import { signBchAuthMessage } from '@/lib/auth/bch-message';
 import { encodeCommitment, normalizeCardAsset, satsToBch } from '@/lib/cards';
 import { BLOCKS_PER_WEEK, commitmentFromSeed, FLOOR_MULTIPLIER_MILLI, ODDS, SERIES_CONFIG } from '@/lib/rng';
 import { verifyBatchCardGeneration, verifyCardGeneration } from '@/lib/verify';
@@ -278,5 +279,77 @@ export async function redeemCardOnChipnet(userWif: string, card: CardAsset) {
   }
 
   return { txid, payout, houseCut, multiplierMilli, adjustedFaceValue };
+}
+
+export async function commitMarketIntentOnChipnet(input: {
+  walletWif: string;
+  action: 'list' | 'buy';
+  payload: string;
+}) {
+  const { cashscript, bitcore } = await deps();
+  const key = bitcore.PrivateKey.fromWIF(input.walletWif);
+  const walletAddress = key.toAddress(bitcore.Networks.testnet).toString();
+  const signatureMessage = `BurnBounty Market ${input.action}\n${input.payload}`;
+  const signature = signBchAuthMessage(input.walletWif, signatureMessage);
+  const payloadDigest = crypto.createHash('sha256').update(input.payload).digest('hex');
+
+  let txid = crypto
+    .createHash('sha256')
+    .update(`market:${input.action}:${walletAddress}:${signature}:${payloadDigest}:${Date.now()}`)
+    .digest('hex');
+  let chainCommitted = false;
+
+  if (ENABLE_CHAIN_CALLS) {
+    const { ElectrumNetworkProvider, SignatureTemplate, TransactionBuilder } = cashscript;
+    const provider = new ElectrumNetworkProvider('chipnet', CHIPNET_ELECTRUM);
+    const signer = new SignatureTemplate(input.walletWif);
+    const utxos = await provider.getUtxos(walletAddress);
+    const spendable = utxos
+      .filter((utxo: any) => !utxo.token)
+      .sort((a: any, b: any) => (a.satoshis === b.satoshis ? 0 : a.satoshis > b.satoshis ? -1 : 1));
+
+    if (!spendable.length) {
+      throw new Error('No spendable BCH UTXOs available to commit market intent on chain.');
+    }
+
+    const estimateFee = (inputCount: number) => BigInt(12 + inputCount * 148 + 2 * 34 + 80);
+    const dust = 546n;
+    const selected: any[] = [];
+    let total = 0n;
+    for (const utxo of spendable) {
+      selected.push(utxo);
+      total += BigInt(utxo.satoshis);
+      const required = estimateFee(selected.length) + dust;
+      if (total >= required) break;
+    }
+
+    const fee = estimateFee(selected.length);
+    const change = total - fee;
+    if (change < dust) {
+      throw new Error('Insufficient BCH balance for market intent commit fee.');
+    }
+
+    const txBuilder = new TransactionBuilder({
+      provider,
+      maximumFeeSatoshis: 20_000n,
+      maximumFeeSatsPerByte: 3
+    });
+
+    txBuilder.addInputs(selected, signer.unlockP2PKH());
+    txBuilder.addOpReturnOutput([
+      'BurnBounty',
+      'market-intent',
+      input.action,
+      `0x${payloadDigest.slice(0, 32)}`,
+      `0x${payloadDigest.slice(32)}`
+    ]);
+    txBuilder.addOutput({ to: walletAddress, amount: change });
+
+    const sent = await txBuilder.send();
+    txid = sent.txid;
+    chainCommitted = true;
+  }
+
+  return { walletAddress, signature, txid, chainCommitted };
 }
 

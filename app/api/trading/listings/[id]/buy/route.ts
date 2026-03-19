@@ -6,12 +6,15 @@ import { sessionCookieName, validateSessionToken } from '@/lib/auth/session';
 import { addressesEqual, normalizeBchAddress } from '@/lib/auth/bch-address';
 import { authError } from '@/lib/auth/errors';
 import { getWalletsForUser } from '@/lib/auth/store';
+import { commitMarketIntentOnChipnet } from '@/lib/cashscript';
 
 const bodySchema = z
   .object({
+    wallet_wif: z.string().min(1),
     buyer_address: z.string().min(6).optional()
   })
-  .optional();
+  .optional()
+  .default({ wallet_wif: '' });
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -29,7 +32,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: 'listing_not_found' }, { status: 404 });
     }
 
-    const parsed = bodySchema.safeParse(await req.json().catch(() => ({})));
+    const parsed = bodySchema.safeParse(await req.json().catch(() => ({ wallet_wif: '' })));
     if (!parsed.success) {
       return NextResponse.json(
         { ok: false, error: 'validation_failed', details: parsed.error.flatten() },
@@ -49,11 +52,27 @@ export async function POST(req: NextRequest, context: RouteContext) {
       if (!owns) throw authError('wallet_not_bound', 'Buyer address is not linked to this account');
     }
 
+    const walletCommit = await commitMarketIntentOnChipnet({
+      walletWif: parsed.data.wallet_wif,
+      action: 'buy',
+      payload: `${params.id}:${buyerCanonical}:${Date.now()}`
+    });
+    const committedCanonical = normalizeBchAddress(walletCommit.walletAddress).canonicalCashAddr;
+    if (!addressesEqual(committedCanonical, buyerCanonical)) {
+      throw authError('address_mismatch', 'Wallet signature does not match buyer address');
+    }
+
     const listing = await buyTradingListing({
       listingId: params.id,
-      buyerAddress: buyerCanonical
+      buyerAddress: buyerCanonical,
+      buyTxid: walletCommit.txid
     });
-    return NextResponse.json({ ok: true, listing });
+    return NextResponse.json({
+      ok: true,
+      listing,
+      chainTxid: walletCommit.txid,
+      chainCommitted: Boolean(walletCommit.chainCommitted)
+    });
   } catch (err: any) {
     const code = err?.code || err?.message;
     if (code === 'listing_not_found') {
@@ -65,4 +84,3 @@ export async function POST(req: NextRequest, context: RouteContext) {
     return jsonAuthError(err, 'Listing buy failed');
   }
 }
-

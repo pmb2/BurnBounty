@@ -50,6 +50,9 @@ Format inspired by Keep a Changelog and semantic versioning.
   - market tab now renders listing card images and stat snapshots
   - universal buy flow added (`POST /api/trading/listings/[id]/buy`) for authenticated buyers
   - listings now transition `active -> sold` with buyer tracking and buy-button UX
+  - market listing form now supports explicit price units (`sats`, `bits`, `mBCH`, `BCH`) with sat/BCH preview
+  - listing and purchase actions now use confirmation modals with card imagery and one-click wallet signing
+  - market list/buy API now records signed market intent tx markers (`sale_txid`, `buy_txid`) and returns chain commit metadata
 - Home onboarding flow now prioritizes one dominant CTA (`Start Playing`) and defers advanced wallet methods.
 - Auth Hub now defaults to embedded onboarding and gates external/Snap under explicit advanced options.
 - Header wallet state now shows persistent auth status with wallet-type context; gameplay WIF input is collapsed.
